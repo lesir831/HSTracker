@@ -266,6 +266,7 @@ extension CardIds.Collectible {
         static let OddMap = "TLC_824"
         static let PackKodo = "BAR_030"
         static let PrimordialExplorer = "DRG_254"
+        static let ToxicReinforcements = "DRG_255"
         static let RaptorNestNurse = "DINO_434"
         static let RinlingsRifle = "DMF_088"
         static let SaddleUp = "WW_812"

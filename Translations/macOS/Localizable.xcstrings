@@ -13564,6 +13564,57 @@
         }
       }
     },
+    "Counter_QuestEnemyHeroDamage" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Damage to Enemy Hero (this game / today)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对敌方英雄造成的伤害（本局 / 今日）"
+          }
+        }
+      }
+    },
+    "Counter_QuestHeroPower" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hero Power Uses (this game / today)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "英雄技能使用次数（本局 / 今日）"
+          }
+        }
+      }
+    },
+    "Counter_QuestManaSpent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mana Spent (this game / today)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "消耗的法力水晶（本局 / 今日）"
+          }
+        }
+      }
+    },
     "Counter_RandomTavernMinionBuff" : {
       "extractionState" : "manual",
       "localizations" : {

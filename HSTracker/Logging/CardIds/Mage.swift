@@ -175,6 +175,7 @@ extension CardIds.Collectible {
         static let SolidAlibi = "REV_504"
         static let Surfalopod = "VAC_443"
         static let ElementalAllies = "DRG_324"
+        static let LearnDraconic = "DRG_323"
         static let OverflowSurger = "WW_424"
         static let GhastlyConjurerCorePlaceholder = "CORE_ICC_069"
         static let IngeniousArtificer = "GDB_135"
