@@ -4052,6 +4052,7 @@
 		B8AA10042FC1000100AA1004 /* Arena */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Arena; sourceTree = "<group>"; };
 		B8AEB6142FB2770200CDA2C0 /* AnimalCompanionGenerator */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = AnimalCompanionGenerator; sourceTree = "<group>"; };
 		C4537347985E5790B88F7690 /* Pools */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Pools; sourceTree = "<group>"; };
+		B8C0FFEE2FD0000100AB0001 /* QuestProgress */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = QuestProgress; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -4888,6 +4889,7 @@
 				B8E1E5A42D0B867B00383975 /* BgCounters */,
 				B8196F192CC87054007C0371 /* Counters */,
 				B8196F152CC86FB3007C0371 /* NumericCounter.swift */,
+				B8C0FFEE2FD0000100AB0001 /* QuestProgress */,
 				B8196F172CC87021007C0371 /* StatsCounter.swift */,
 			);
 			path = CounterSystem;
@@ -6843,6 +6845,7 @@
 				B8AA10042FC1000100AA1004 /* Arena */,
 				B8AEB6142FB2770200CDA2C0 /* AnimalCompanionGenerator */,
 				C4537347985E5790B88F7690 /* Pools */,
+				B8C0FFEE2FD0000100AB0001 /* QuestProgress */,
 			);
 			name = HSTracker;
 			packageProductDependencies = (

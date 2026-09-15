@@ -124,6 +124,7 @@ extension CardIds.Collectible {
         static let AstralTiger: String = "LOOT_056"
         static let Splintergraft: String = "GIL_658"
         static let SecureTheDeck: String = "DRG_317"
+        static let StrengthInNumbers = "DRG_051"
         static let ArchsporeMsshifn = "BT_136"
         static let YseraUnleashed = "DRG_320"
         static let KiriChosenOfElune = "DMF_733"

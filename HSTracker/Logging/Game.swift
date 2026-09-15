@@ -1937,6 +1937,7 @@ class Game: NSObject, PowerEventHandler {
         }
         
         counterManager.reset()
+        QuestProgressStore.shared.beginGame()
         
         if isTraditionalHearthstoneMatch {
             CardLegalityChecker.loadCardsByFormat(gameType: currentGameType, format: currentFormatType)
@@ -2401,6 +2402,9 @@ class Game: NSObject, PowerEventHandler {
         }
         
         activeEffects.reset()
+        if isTraditionalHearthstoneMatch {
+            QuestProgressStore.shared.commitGame()
+        }
         counterManager.reset()
     }
     

@@ -15,6 +15,7 @@
                 <outlet property="showBottomCards" destination="mw3-8S-Qfd" id="sPH-Qw-nIg"/>
                 <outlet property="showCorpsesCounter" destination="Cor-ps-001" id="Cor-ps-004"/>
                 <outlet property="showCounters" destination="sgy-13-dsa" id="dTX-wb-2S8"/>
+                <outlet property="showQuestProgressCounters" destination="Qst-pr-001" id="Qst-pr-004"/>
                 <outlet property="showDeathrattleCounter" destination="E5o-tN-vdV" id="dkS-7r-Nop"/>
                 <outlet property="showDeckName" destination="xPH-sG-hVe" id="Abt-o1-xT9"/>
                 <outlet property="showGraveyard" destination="D65-CQ-243" id="Pw5-me-Aci"/>
@@ -194,6 +195,16 @@
                         <action selector="checkboxClicked:" target="-2" id="Cor-ps-003"/>
                     </connections>
                 </button>
+                <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Qst-pr-001">
+                    <rect key="frame" x="20" y="181" width="421" height="16"/>
+                    <buttonCell key="cell" type="check" title="Show quest progress counters (hero power, enemy hero damage, mana spent)" bezelStyle="regularSquare" imagePosition="left" state="off" inset="2" id="Qst-pr-002">
+                        <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
+                        <font key="font" metaFont="system"/>
+                    </buttonCell>
+                    <connections>
+                        <action selector="checkboxClicked:" target="-2" id="Qst-pr-003"/>
+                    </connections>
+                </button>
                 <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Yk4-rS-X8P">
                     <rect key="frame" x="20" y="168" width="421" height="16"/>
                     <buttonCell key="cell" type="check" title="Highlight synergies in the deck" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="B89-dN-j4b">
@@ -313,6 +324,8 @@
                 <constraint firstItem="y1s-H7-YS6" firstAttribute="leading" secondItem="XxF-gV-LnW" secondAttribute="leading" constant="20" symbolic="YES" id="Y9F-DW-iWb"/>
                 <constraint firstItem="Cor-ps-001" firstAttribute="leading" secondItem="XxF-gV-LnW" secondAttribute="leading" constant="20" symbolic="YES" id="Cor-ps-005"/>
                 <constraint firstAttribute="trailing" secondItem="Cor-ps-001" secondAttribute="trailing" constant="20" symbolic="YES" id="Cor-ps-006"/>
+                <constraint firstItem="Qst-pr-001" firstAttribute="leading" secondItem="XxF-gV-LnW" secondAttribute="leading" constant="20" symbolic="YES" id="Qst-pr-005"/>
+                <constraint firstAttribute="trailing" secondItem="Qst-pr-001" secondAttribute="trailing" constant="20" symbolic="YES" id="Qst-pr-006"/>
                 <constraint firstAttribute="trailing" secondItem="mw3-8S-Qfd" secondAttribute="trailing" constant="20" symbolic="YES" id="Zib-o9-UTB"/>
                 <constraint firstAttribute="trailing" secondItem="FGp-0L-JIH" secondAttribute="trailing" constant="20" symbolic="YES" id="aeR-c8-buE"/>
                 <constraint firstAttribute="trailing" secondItem="xcN-Th-tgi" secondAttribute="trailing" constant="20" symbolic="YES" id="atJ-We-1ek"/>

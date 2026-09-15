@@ -37,6 +37,7 @@ class PlayerTrackersPreferences: PreferencePaneController, PreferencePane {
     @IBOutlet var showPlayerHighlightSynergies: NSButton!
     @IBOutlet var showPlayerMaxResources: NSButton!
     @IBOutlet var showCorpsesCounter: NSButton!
+    @IBOutlet var showQuestProgressCounters: NSButton!
 
     override func viewWillAppear() {
         super.viewWillAppear()
@@ -67,6 +68,7 @@ class PlayerTrackersPreferences: PreferencePaneController, PreferencePane {
         showPlayerHighlightSynergies.state = Settings.showPlayerHighlightSynergies ? .on : .off
         showPlayerMaxResources.state = Settings.showPlayerMaxResources ? .on : .off
         showCorpsesCounter.state = Settings.showPlayerCorpsesCounter ? .on : .off
+        showQuestProgressCounters.state = Settings.showQuestProgressCounters ? .on : .off
     }
     
     @IBAction func colorChange(_ sender: NSColorWell) {
@@ -122,6 +124,9 @@ class PlayerTrackersPreferences: PreferencePaneController, PreferencePane {
         } else if sender == showCorpsesCounter {
             Settings.showPlayerCorpsesCounter = showCorpsesCounter.state == .on
             AppDelegate.instance().coreManager.game.updatePlayerResourcesWidget()
+        } else if sender == showQuestProgressCounters {
+            Settings.showQuestProgressCounters = showQuestProgressCounters.state == .on
+            AppDelegate.instance().coreManager.game.updatePlayerCounters()
         }
     }
 }

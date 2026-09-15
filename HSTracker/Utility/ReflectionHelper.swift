@@ -85,7 +85,7 @@ class ReflectionHelper {
                 cacheMonoClassList.append(mcl)
             } else if let aecl = cl as? EntityBasedEffect.Type {
                 cacheActiveEffectClassList.append(aecl)
-            } else if let dccl = cl as? BaseCounter.Type, cl != BaseCounter.self && cl != StatsCounter.self && cl != NumericCounter.self {
+            } else if let dccl = cl as? BaseCounter.Type, cl != BaseCounter.self && cl != StatsCounter.self && cl != NumericCounter.self && cl != QuestProgressCounter.self {
                 cacheCounterClassList.append(dccl)
             } else if let rccl = cl as? ICardWithRelatedCards.Type, rccl != ResurrectionCard.self, !isAbstractPoolBase {
                 cacheRelatedClassList.append(rccl)

@@ -829,6 +829,24 @@
         }
       }
     },
+    "Qst-pr-002.title" : {
+      "comment" : "Class = \"NSButtonCell\"; title = \"Show quest progress counters (hero power, enemy hero damage, mana spent)\"; ObjectID = \"Qst-pr-002\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Show quest progress counters (hero power, enemy hero damage, mana spent)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示任务进度计数器（英雄技能、敌方英雄伤害、法力消耗）"
+          }
+        }
+      }
+    },
     "r3h-Qd-YPW.title" : {
       "comment" : "Class = \"NSButtonCell\"; title = \"Include obtained cards\"; ObjectID = \"r3h-Qd-YPW\";",
       "extractionState" : "extracted_with_value",

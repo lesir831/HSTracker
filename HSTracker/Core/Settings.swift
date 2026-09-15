@@ -527,6 +527,8 @@ final class Settings {
     // this for automatically - they already know their own deck - so this defaults off.
     @UserDefault(key: Settings.player_corpses_counter, defaultValue: false)
     static var showPlayerCorpsesCounter: Bool
+    @UserDefault(key: Settings.player_quest_progress_counters, defaultValue: false)
+    static var showQuestProgressCounters: Bool
     @UserDefault(key: Settings.opponent_max_resources, defaultValue: true)
     static var showOpponentMaxResources: Bool
 
@@ -825,6 +827,7 @@ extension Settings {
     static let outfinder_use_card_tiles = "outfinder_use_card_tiles"
     static let player_max_resources = "player_max_resources"
     static let player_corpses_counter = "player_corpses_counter"
+    static let player_quest_progress_counters = "player_quest_progress_counters"
     static let opponent_deathrattle_frame = "opponent_deathrattle_frame"
     static let opponent_graveyard_frame = "opponent_graveyard_frame"
     static let opponent_graveyard_details_frame = "opponent_graveyard_details_frame"
