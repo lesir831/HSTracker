@@ -87,11 +87,18 @@ class SceneHandler {
     
     private static func onSceneTransitionComplete(from: Mode, to: Mode) {
         SceneHandler.scene = to
+        DispatchQueue.main.async { AccountProgressModel.shared.sceneChanged(to.rawValue) }
 
         guard let core = AppDelegate.instance().coreManager else {
             return
         }
         let game = core.game
+
+        DispatchQueue.main.async {
+            game.experienceScene.bootstrapMenu(model: .shared,
+                counter: game.windowManager.rootOverlay?.viewModel.experienceCounter,
+                enabled: Settings.showExperienceCounter)
+        }
 
         if to == .tournament {
             Watchers.deckPickerWatcher.run()

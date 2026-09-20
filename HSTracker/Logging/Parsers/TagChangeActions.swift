@@ -136,6 +136,7 @@ struct TagChangeActions {
             }
             if let game = eventHandler as? Game {
                 game.counterManager.handleTagChange(tag: tag, id: id, value: value, prevValue: prevValue)
+                game.updateAccountQuestEstimate(tag: tag, entityID: id, value: value)
             }
         }
     }

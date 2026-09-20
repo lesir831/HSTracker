@@ -58,6 +58,7 @@ class RootOverlayViewModel: ObservableObject {
     // MercenariesTaskListView - one view model for the pair here too, since the
     // button's only job is to reveal the list.
     let mercenariesTasks = MercenariesTaskListViewModel()
+    let accountQuests: AccountQuestOverlayViewModel
     // HDT's OverlayWindow.OpacityMaskOverlay, which it hands to the window's own
     // OpacityMask - the regions of the canvas cut away so what Hearthstone draws
     // over its board (a blown-up hovered card, its tooltips, the discover
@@ -133,6 +134,7 @@ class RootOverlayViewModel: ObservableObject {
     private var windowsLockedObserver: NSObjectProtocol?
 
     init() {
+        accountQuests = AccountQuestOverlayViewModel(experience: experienceCounter)
         // HDT wires the same reference in OverlayWindow's constructor
         // (BattlegroundsMinionPinningViewModel.CompsGuidesVM = ...): the key
         // piece recommendations are mined out of the loaded comp guides.

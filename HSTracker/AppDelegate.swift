@@ -530,6 +530,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegat
             return
         }
                 
+        AccountProgressModel.shared.start()
         coreManager?.start()
         
         if triggers.count == 0 {
@@ -701,6 +702,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegat
             }
             
             let windowMenu = mainMenu?.item(withTitle: String.localizedString("Window", comment: ""))
+#if DEBUG
+            if windowMenu?.submenu?.items.contains(where: { $0.action == #selector(self.openAccountProgress(_:)) }) == false {
+                let progress = NSMenuItem(title: String.localizedString("AccountProgress_Title", comment: ""),
+                                          action: #selector(self.openAccountProgress(_:)), keyEquivalent: "")
+                progress.target = self
+                windowMenu?.submenu?.addItem(progress)
+            }
+#endif
+
             let item = windowMenu?.submenu?.item(withTitle: String.localizedString("Lock windows",
                                                                               comment: ""))
             item?.title = String.localizedString(Settings.windowsLocked ?  "Unlock windows" : "Lock windows",
@@ -708,6 +718,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegat
         }
     }
     
+#if DEBUG
+    @objc func openAccountProgress(_ sender: Any?) {
+        AccountProgressWindow.shared.open()
+    }
+#endif
+
     @objc func showReplay(_ sender: NSMenuItem) {
         if let replayId = sender.representedObject as? String {
             HSReplayManager.showReplay(replayId: replayId)

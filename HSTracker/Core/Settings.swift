@@ -638,6 +638,21 @@ final class Settings {
     @UserDefault(key: Settings.secrets_panel_scaling, defaultValue: 1.0)
     static var secretsPanelScaling: Double
 
+    // Daily and weekly quests use a compact button on the overlay canvas.
+    // Its anchor is stored as percentages of the full client dimensions.
+    @UserDefault(key: Settings.account_quest_overlay_enabled, defaultValue: true)
+    static var accountQuestOverlayEnabled: Bool
+    @UserDefault(key: Settings.account_quest_show_traditional, defaultValue: true)
+    static var accountQuestShowTraditional: Bool
+    @UserDefault(key: Settings.account_quest_show_battlegrounds, defaultValue: false)
+    static var accountQuestShowBattlegrounds: Bool
+    @UserDefault(key: Settings.account_quest_overlay_pinned, defaultValue: false)
+    static var accountQuestOverlayPinned: Bool
+    @UserDefault(key: Settings.account_quest_overlay_horizontal, defaultValue: 99.0)
+    static var accountQuestOverlayHorizontal: Double
+    @UserDefault(key: Settings.account_quest_overlay_vertical, defaultValue: 93.0)
+    static var accountQuestOverlayVertical: Double
+
     // Where the counters and the active-effects tiles sit, as percentages of the
     // client - HDT's PlayerCountersVertical/Horizontal, OpponentCountersVertical/
     // Horizontal and the ActiveEffects pair, with HDT's own defaults (Config.cs).
@@ -1020,6 +1035,12 @@ extension Settings {
     static let secrets_panel_left = "secrets_panel_left"
     static let secrets_panel_height = "secrets_panel_height"
     static let secrets_panel_scaling = "secrets_panel_scaling"
+    static let account_quest_overlay_enabled = "account_quest_overlay_enabled"
+    static let account_quest_show_traditional = "account_quest_show_traditional"
+    static let account_quest_show_battlegrounds = "account_quest_show_battlegrounds"
+    static let account_quest_overlay_pinned = "account_quest_overlay_pinned"
+    static let account_quest_overlay_horizontal = "account_quest_overlay_horizontal"
+    static let account_quest_overlay_vertical = "account_quest_overlay_vertical"
     static let player_counters_vertical = "player_counters_vertical"
     static let player_counters_horizontal = "player_counters_horizontal"
     static let opponent_counters_vertical = "opponent_counters_vertical"

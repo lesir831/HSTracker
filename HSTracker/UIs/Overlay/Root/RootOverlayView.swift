@@ -62,6 +62,7 @@ enum HoverRegionID {
     // MouseEnter/MouseLeave handlers - it reveals the task list without ever
     // taking a click of its own.
     static let mercenariesTasksButton = "mercenariesTasksButton"
+    static let accountQuests = "accountQuests"
 }
 
 struct HoverRegionPreferenceKey: PreferenceKey {
@@ -205,8 +206,9 @@ struct RootOverlayView: View {
                 // of the two attack icons above, which only matters in
                 // principle - the counter is a menu element and the icons a
                 // gameplay one, so the two never share the screen.
-                ExperienceCounterView(viewModel: viewModel.experienceCounter,
-                                      canvasWidth: canvasWidth)
+                AccountQuestExperienceEntryView(quests: viewModel.accountQuests,
+                                                experience: viewModel.experienceCounter,
+                                                canvasWidth: canvasWidth, canvasScale: scale)
 
                 // HDT declares the V1 guide immediately before the V2
                 // one on its own canvas, and sizes both to
@@ -612,6 +614,19 @@ struct RootOverlayView: View {
             // in this fixed-pixel layer for the usual reason: nothing ever
             // gives it a ScaleTransform.
             FlavorTextView(viewModel: viewModel.flavorText, canvasSize: geometry.size)
+            // Task details can extend over a deck list, so paint them after
+            // the fixed-size trackers while retaining the shared canvas scale.
+            AccountQuestOverlayView(viewModel: viewModel.accountQuests,
+                                    placement: viewModel.accountQuests.placement,
+                                    canvasWidth: canvasWidth,
+                                    canvasSize: geometry.size,
+                                    isLocked: viewModel.windowsLocked)
+                .scaleEffect(scale, anchor: .center)
+                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+            AccountQuestMenuOverlayView(viewModel: viewModel.accountQuests,
+                                        canvasWidth: canvasWidth, canvasSize: geometry.size)
+                .scaleEffect(scale, anchor: .center)
+                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
             // Future SwiftUI overlay features attach here as additional children.
 
         }

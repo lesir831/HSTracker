@@ -341,6 +341,7 @@ final class CoreManager: NSObject {
 
     func stopTracking() {
         logger.info("Stop Tracking")
+        DispatchQueue.main.async { AccountProgressModel.shared.gameClosed() }
         trackingGeneration += 1
         trackingStartPending = false
 		logReaderManager.stop(eraseLogFile: !CoreManager.isHearthstoneRunning())

@@ -1,0 +1,4 @@
+.build/
+.swiftpm/
+Metadata/bin/
+Metadata/obj/

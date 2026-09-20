@@ -37,6 +37,7 @@ final class OverlayWidgetPlacement: ObservableObject {
         /// - how far the two per-player timers sit from the middle one, in points
         /// rather than percentages.
         case timerSpacing
+        case accountQuests
     }
 
     let widget: Widget
@@ -55,6 +56,7 @@ final class OverlayWidgetPlacement: ObservableObject {
     /// since the last move, so each step is taken against the previous
     /// translation - the same shape as `TrackerPanelViewModel.drag`.
     private var lastDragTranslation: CGSize?
+    private var settingsObservers: [NSObjectProtocol] = []
 
     init(widget: Widget, isPlayer: Bool) {
         self.widget = widget
@@ -90,7 +92,23 @@ final class OverlayWidgetPlacement: ObservableObject {
         case (.timerSpacing, _):
             vertical = Settings.timersVerticalSpacing
             horizontal = Settings.timersHorizontalSpacing
+        case (.accountQuests, _):
+            vertical = Settings.accountQuestOverlayVertical
+            horizontal = Settings.accountQuestOverlayHorizontal
         }
+        if widget == .accountQuests {
+            for key in [Settings.account_quest_overlay_horizontal, Settings.account_quest_overlay_vertical] {
+                settingsObservers.append(NotificationCenter.default.addObserver(
+                    forName: Notification.Name(key), object: nil, queue: .main) { [weak self] _ in
+                        self?.horizontal = Settings.accountQuestOverlayHorizontal
+                        self?.vertical = Settings.accountQuestOverlayVertical
+                    })
+            }
+        }
+    }
+
+    deinit {
+        settingsObservers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
     /// `translation` is in the canvas's own real pixels - the widgets themselves
@@ -130,6 +148,9 @@ final class OverlayWidgetPlacement: ObservableObject {
             // and HDT's delta is the pixel delta pre-multiplied by 100.
             vertical += Double(dy)
             horizontal += Double(dx)
+        case .accountQuests:
+            vertical = min(100, max(0, vertical + Double(dy / canvasSize.height) * 100))
+            horizontal = min(100, max(0, horizontal + Double(dx / canvasSize.width) * 100))
         }
     }
 
@@ -167,6 +188,9 @@ final class OverlayWidgetPlacement: ObservableObject {
         case (.timerSpacing, _):
             Settings.timersVerticalSpacing = vertical
             Settings.timersHorizontalSpacing = horizontal
+        case (.accountQuests, _):
+            Settings.accountQuestOverlayVertical = vertical
+            Settings.accountQuestOverlayHorizontal = horizontal
         }
     }
 }

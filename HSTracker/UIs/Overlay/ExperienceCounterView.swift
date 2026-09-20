@@ -90,6 +90,9 @@ struct ExperienceCounterView: View {
     // in the fixed-pixel layer because _experienceCounterBehavior gives it
     // GetScaling = AutoScaling, the Height/1080 factor this subtree applies.
     let canvasWidth: CGFloat
+    var canvasScale: CGFloat = 1
+    var canOpenQuests: Bool = false
+    var onToggleQuests: () -> Void = {}
 
     private static let canvasHeight: CGFloat = 1080
 
@@ -156,9 +159,44 @@ struct ExperienceCounterView: View {
             Color.clear
             if viewModel.isShown {
                 viewbox.offset(x: originX, y: originY)
+                if canOpenQuests {
+                    questToggle
+                }
             }
         }
         .frame(width: canvasWidth, height: Self.canvasHeight, alignment: .topLeading)
+    }
+
+    /// The artwork extends outside its nominal 85x85 viewbox. Match that
+    /// artwork rather than making the blank portion below the bar clickable.
+    static func visualFrame(canvasWidth: CGFloat) -> CGRect {
+        let track = CGRect(x: 0, y: 0, width: trackWidth, height: barHeight)
+        let gem = CGRect(origin: gemOrigin, size: gemSize)
+        let scroll = CGRect(origin: scrollOrigin,
+                            size: CGSize(width: scrollWidth, height: scrollHeight))
+        let artwork = track.union(gem).union(scroll)
+        let origin = counterOrigin(canvasWidth: canvasWidth)
+        return CGRect(x: origin.x + artwork.minX * viewboxScale,
+                      y: origin.y + artwork.minY * viewboxScale,
+                      width: artwork.width * viewboxScale,
+                      height: artwork.height * viewboxScale)
+    }
+
+    private var questToggle: some View {
+        let frame = Self.visualFrame(canvasWidth: canvasWidth)
+        let interactiveFrame = CGRect(x: frame.minX * canvasScale,
+                                      y: frame.minY * canvasScale,
+                                      width: frame.width * canvasScale,
+                                      height: frame.height * canvasScale)
+        return Button(action: onToggleQuests) {
+            Color.clear
+                .frame(width: frame.width, height: frame.height)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PlainButtonStyle())
+        .accessibility(label: Text(String.localizedString("AccountProgress_ToggleMenuQuests", comment: "")))
+        .offset(x: frame.minX, y: frame.minY)
+        .preference(key: InteractiveRegionPreferenceKey.self, value: [interactiveFrame])
     }
 
     private var viewbox: some View {
@@ -233,12 +271,17 @@ struct ExperienceCounterView: View {
 
     // Canvas.Right = Height * .35, expressed as the left edge this ZStack needs.
     private var originX: CGFloat {
-        canvasWidth - Self.canvasHeight * Self.rightFactor - Self.viewboxWidth
+        Self.counterOrigin(canvasWidth: canvasWidth).x
     }
 
     // Canvas.Top = Height * .9652.
     private var originY: CGFloat {
-        Self.canvasHeight * Self.topFactor
+        Self.counterOrigin(canvasWidth: canvasWidth).y
+    }
+
+    private static func counterOrigin(canvasWidth: CGFloat) -> CGPoint {
+        CGPoint(x: canvasWidth - canvasHeight * rightFactor - viewboxWidth,
+                y: canvasHeight * topFactor)
     }
 
     // OutlinedTextBlock.OnRender drops the line by a twentieth of its own

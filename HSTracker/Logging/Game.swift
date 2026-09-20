@@ -682,6 +682,48 @@ class Game: NSObject, PowerEventHandler {
     // OverlayWindow's ExperienceFadeDelay and LevelResetDelay, in seconds.
     static let experienceFadeDelay = 6.0
     static let levelResetDelay = 0.5
+
+    static let experienceMenuModes: Set<Mode> = [.hub, .game_mode, .tournament, .draft, .pvp_dungeon_run]
+
+    /// A stable memory scene can initialize presentation before LoadingScreen
+    /// emits its first line. It must never override a known log mode or match.
+    struct ExperienceScene {
+        let loggedMode: Mode?
+        let stableMode: Mode?
+        let isInMenu: Bool
+        let gameEnded: Bool
+
+        private var canBootstrap: Bool {
+            (loggedMode == nil || loggedMode == .invalid) && isInMenu && gameEnded
+        }
+
+        var mode: Mode? {
+            if let loggedMode, loggedMode != .invalid { return loggedMode }
+            return canBootstrap ? stableMode : nil
+        }
+
+        func bootstrapMenu(model: AccountProgressModel, counter: ExperienceCounterViewModel?, enabled: Bool) {
+            guard canBootstrap, let mode else { return }
+            let menuActive = Game.experienceMenuModes.contains(mode)
+            model.setMenuActive(menuActive)
+            guard let counter else { return }
+            if menuActive { counter.show() } else { counter.hide() }
+            counter.isShown = enabled && counter.visible
+        }
+
+        /// Keep the existing post-animation hub-only rule, including at startup.
+        @discardableResult
+        func finishExperienceUpdate(_ counter: ExperienceCounterViewModel) -> Bool {
+            guard mode != .hub else { return false }
+            counter.hide()
+            return true
+        }
+    }
+
+    var experienceScene: ExperienceScene {
+        ExperienceScene(loggedMode: currentMode, stableMode: SceneHandler.scene,
+                        isInMenu: isInMenu, gameEnded: gameEnded)
+    }
     
     // The waits below are plain sleeps where HDT awaits, so they need a thread
     // that can afford to sit still: one level-up holds the method for six and a
@@ -749,9 +791,10 @@ class Game: NSObject, PowerEventHandler {
         // Read again rather than reusing the mode captured above: the animation
         // above can have held this method for half a minute, which is exactly
         // when the player has left the hub in the meantime.
-        if self.currentMode != Mode.hub {
-            onExperienceCounter { $0.hide() }
-            guiNeedsUpdate = true
+        onExperienceCounter { counter in
+            if self.experienceScene.finishExperienceUpdate(counter) {
+                self.guiNeedsUpdate = true
+            }
         }
     }
 
@@ -1901,6 +1944,16 @@ class Game: NSObject, PowerEventHandler {
         }
         
         counterManager.reset()
+        let progressMatchID = gameId
+        let progressSpectator = spectator
+        let progressQuestEligible = isTraditionalHearthstoneMatch && currentGameMode != .practice
+        let progressOverlayEligible = progressQuestEligible || isBattlegroundsMatch()
+        DispatchQueue.main.async {
+            AccountProgressModel.shared.beginMatch(progressMatchID, spectator: progressSpectator,
+                                                  questEligible: progressQuestEligible,
+                                                  overlayEligible: progressOverlayEligible)
+        }
+
         
         if isTraditionalHearthstoneMatch {
             CardLegalityChecker.loadCardsByFormat(gameType: currentGameType, format: currentFormatType)
@@ -2250,6 +2303,8 @@ class Game: NSObject, PowerEventHandler {
 			+ "handledGameEnd: \(self.handledGameEnd)")
 		
         self.handledGameEnd = true
+        DispatchQueue.main.async { AccountProgressModel.shared.endMatch() }
+
                 
         // clear any left over hover
         windowManager.forceHideCardHover()

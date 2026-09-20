@@ -8,6 +8,7 @@
 
 import Foundation
 import HearthMirror
+import CryptoKit
 
 /**
  * MirrorHelper takes care of all Mirror-related activities
@@ -16,6 +17,8 @@ struct MirrorHelper {
     
     /** Internal represenation of the mirror object, do not access it directly */
     private static var _mirror: HearthMirror?
+    private static var progressReader: AccountProgressReader?
+    private static var progressProcess: String?
     
     private static let accessQueue = DispatchQueue(label: "net.hearthsim.hstracker.mirrorQueue", attributes: [])
     
@@ -70,6 +73,8 @@ struct MirrorHelper {
         logger.verbose("Deinitializing mirror")
         MirrorHelper.accessQueue.sync {
             MirrorHelper._mirror = nil
+            progressReader = nil
+            progressProcess = nil
         }
     }
     
@@ -77,6 +82,44 @@ struct MirrorHelper {
         return MirrorHelper._mirror != nil
     }
     
+    /// Shared with normal Mirror reads so a new sample cannot race a mirror teardown.
+    static func readAccountProgress(includeSnapshot: Bool) throws -> (scope: String, reading: AccountProgressReading) {
+        try accessQueue.sync {
+            guard let app = CoreManager.hearthstoneApp, let mirror = mirror,
+                  let account = mirror.getAccountId() else {
+                progressReader = nil
+                throw AccountProgressReadFailure(scope: nil, reason: "accountUnavailable")
+            }
+            let hi = account.hi.int64Value
+            let lo = account.lo.int64Value
+            guard hi != 0, lo != 0 else {
+                throw AccountProgressReadFailure(scope: nil, reason: "accountNotReady")
+            }
+            let region = (hi >> 32) & 255
+            let scope = SHA256.hash(data: Data("\(hi):\(lo):\(region)".utf8))
+                .map { String(format: "%02x", $0) }.joined()
+            do {
+                let process = "\(app.processIdentifier):\(app.launchDate?.timeIntervalSince1970 ?? 0)"
+                if progressReader == nil || progressProcess != process {
+                    progressReader = try AccountProgressReader(pid: app.processIdentifier)
+                    progressProcess = process
+                }
+                guard let reader = progressReader else { throw ProbeError.unavailable("readerUnavailable") }
+                let reading = try reader.read(includeSnapshot: includeSnapshot)
+                guard let after = mirror.getAccountId(), after.hi.int64Value == hi, after.lo.int64Value == lo else {
+                    progressReader = nil
+                    throw AccountProgressReadFailure(scope: nil, reason: "accountChangedDuringRead")
+                }
+                return (scope, reading)
+            } catch let error as AccountProgressReadFailure {
+                throw error
+            } catch {
+                progressReader = nil
+                throw AccountProgressReadFailure(scope: scope, reason: String(describing: error))
+            }
+        }
+    }
+
     // MARK: - Account information
     
     static func getBattleTag() -> String? {
@@ -623,4 +666,3 @@ struct MirrorHelper {
         return result
     }
 }
-

@@ -11,6 +11,16 @@ import Combine
 import Foundation
 
 class RootOverlayWindow: OverWindowController {
+    // Widgets move inside this game-sized canvas. The canvas itself must never
+    // acquire a title bar, traffic lights, or a native resize border when unlocked.
+    override var alwaysLocked: Bool { true }
+
+    override func updateFrames() {
+        // The base class makes the entire native window interactive when unlocked.
+        // Only the widgets' reported drag regions may capture clicks on this canvas.
+        updateMouseThrough()
+    }
+
     var hostingView: NSHostingView<RootOverlayView>!
     let viewModel = RootOverlayViewModel()
 
@@ -84,6 +94,15 @@ class RootOverlayWindow: OverWindowController {
         let windowPoint = window.convertPoint(fromScreen: screenLocation)
         let viewPoint = hostingView.convert(windowPoint, from: nil)
 
+        if viewModel.opacityMask.hides(viewPoint, canvasSize: hostingView.bounds.size) {
+            viewModel.hoveredRegionIds = []
+            viewModel.accountQuests.setHovered(false)
+            updateMercenariesTasksHover([])
+            dismissHoverTooltips()
+            setIgnoresMouseEvents(true)
+            return
+        }
+
         updateFilterRegionHover(at: viewPoint)
         boardMouseOver.update(cursor: viewPoint)
         updateArenaPanelHover(at: viewPoint)
@@ -107,7 +126,7 @@ class RootOverlayWindow: OverWindowController {
         // nothing on screen can get between, and what it shows while unlocked is
         // example counters and example effects, whose tooltips say nothing about
         // the game in progress.
-        if viewModel.windowsLocked {
+        if viewModel.windowsLocked && !viewModel.hoveredRegionIds.contains(HoverRegionID.accountQuests) {
             updateHoverTooltip()
             // Also before the guard, and for the same reason: a deck tracker's
             // rows raise their card preview while the canvas over them is
@@ -143,6 +162,7 @@ class RootOverlayWindow: OverWindowController {
         }
 
         updateMercenariesTasksHover(hovered)
+        viewModel.accountQuests.setHovered(hovered.contains(HoverRegionID.accountQuests))
 
         let hovering = hovered.contains(HoverRegionID.bgsTopBarMask)
         let minions = viewModel.battlegroundsMinionsGuide

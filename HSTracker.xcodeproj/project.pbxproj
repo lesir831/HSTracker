@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1C0A0013000000100000003 /* AccountProgressLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0A0013000000100000004 /* AccountProgressLifecycleTests.swift */; };
+		A1C0A0013000000100000005 /* AccountQuestOverlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0A0013000000100000006 /* AccountQuestOverlayTests.swift */; };
+		A1C0A0013000000100000007 /* AccountQuestMenuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0A0013000000100000008 /* AccountQuestMenuTests.swift */; };
 		B1E23D99CFA2CFAFC7DBF800 /* TrackerCardListContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5CFE2158D3EF502FD789BB /* TrackerCardListContent.swift */; };
 		AD31B9BC942356293D7D6E21 /* TrackerDeckLensView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 214126BF88F828E8BFB365B7 /* TrackerDeckLensView.swift */; };
 		58A28BCD6AA24993B3C6BFA9 /* TrackerCounterViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63F08C2B7D94F211CDAECB66 /* TrackerCounterViews.swift */; };
@@ -1886,6 +1889,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1C0A0013000000100000004 /* AccountProgressLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountProgressLifecycleTests.swift; sourceTree = "<group>"; };
+		A1C0A0013000000100000006 /* AccountQuestOverlayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountQuestOverlayTests.swift; sourceTree = "<group>"; };
+		A1C0A0013000000100000008 /* AccountQuestMenuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountQuestMenuTests.swift; sourceTree = "<group>"; };
 		DD5CFE2158D3EF502FD789BB /* TrackerCardListContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackerCardListContent.swift; sourceTree = "<group>"; };
 		214126BF88F828E8BFB365B7 /* TrackerDeckLensView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackerDeckLensView.swift; sourceTree = "<group>"; };
 		63F08C2B7D94F211CDAECB66 /* TrackerCounterViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackerCounterViews.swift; sourceTree = "<group>"; };
@@ -3742,6 +3748,8 @@
 		B8AA10042FC1000100AA1004 /* Arena */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Arena; sourceTree = "<group>"; };
 		B8AEB6142FB2770200CDA2C0 /* AnimalCompanionGenerator */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = AnimalCompanionGenerator; sourceTree = "<group>"; };
 		C4537347985E5790B88F7690 /* Pools */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Pools; sourceTree = "<group>"; };
+		A1C0A0013000000100000001 /* AccountProgress */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = HSTracker/AccountProgress; sourceTree = SOURCE_ROOT; };
+		A1C0A0013000000100000002 /* ProgressProbeCore */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Tools/AccountProgressProbe/Sources/ProgressProbeCore; sourceTree = SOURCE_ROOT; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -4081,6 +4089,8 @@
 		439C7E4A1C7772C000D29859 /* HSTracker */ = {
 			isa = PBXGroup;
 			children = (
+				A1C0A0013000000100000001 /* AccountProgress */,
+				A1C0A0013000000100000002 /* ProgressProbeCore */,
 				434106A01C9868620045655A /* Assets */,
 				B82F4EAC24E3221D00905024 /* BobsBuddy */,
 				B82AE5F928BE8631004A8FE0 /* BobsBuddy-version.txt */,
@@ -4116,6 +4126,9 @@
 				B8A1F0102FCD0010000A0010 /* CardTooltipTests.swift */,
 				B8A1F0202FCD0020000A0020 /* CardTileThemeTests.swift */,
 				B8A1F0402FCD0040000A0040 /* OverlayWidgetPlacementTests.swift */,
+				A1C0A0013000000100000004 /* AccountProgressLifecycleTests.swift */,
+				A1C0A0013000000100000006 /* AccountQuestOverlayTests.swift */,
+				A1C0A0013000000100000008 /* AccountQuestMenuTests.swift */,
 				B8A1F0422FCD0042000A0042 /* OverlayCanvasGeometryTests.swift */,
 				B8F1A00324F4185200F2F0F2 /* BobsBuddySimulationFailureTests.swift */,
 				59AC68FC073DF2A0DBAB9790 /* GodfreyOverdrawnTests.swift */,
@@ -6562,6 +6575,8 @@
 			);
 			fileSystemSynchronizedGroups = (
 				B8AA10012FC1000100AA1001 /* Arena */,
+				A1C0A0013000000100000001 /* AccountProgress */,
+				A1C0A0013000000100000002 /* ProgressProbeCore */,
 				B8AA10022FC1000100AA1002 /* Arena */,
 				B8AA10032FC1000100AA1003 /* Arena */,
 				B8AA10042FC1000100AA1004 /* Arena */,
@@ -8693,6 +8708,9 @@
 				B8A1F0112FCD0011000A0011 /* CardTooltipTests.swift in Sources */,
 				B8A1F0212FCD0021000A0021 /* CardTileThemeTests.swift in Sources */,
 				B8A1F0412FCD0041000A0041 /* OverlayWidgetPlacementTests.swift in Sources */,
+				A1C0A0013000000100000003 /* AccountProgressLifecycleTests.swift in Sources */,
+				A1C0A0013000000100000005 /* AccountQuestOverlayTests.swift in Sources */,
+				A1C0A0013000000100000007 /* AccountQuestMenuTests.swift in Sources */,
 				B8A1F0432FCD0043000A0043 /* OverlayCanvasGeometryTests.swift in Sources */,
 				B8F1A00424F4185200F2F0F2 /* BobsBuddySimulationFailureTests.swift in Sources */,
 				41CF366434305109269D5CB2 /* GodfreyOverdrawnTests.swift in Sources */,

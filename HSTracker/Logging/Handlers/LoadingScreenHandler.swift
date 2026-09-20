@@ -14,7 +14,6 @@ struct LoadingScreenHandler: LogEventParser {
 	
 	private let coreManager: CoreManager
     
-    private let showExperienceDuringMode = [ Mode.hub, Mode.game_mode, Mode.tournament, Mode.draft, Mode.pvp_dungeon_run ]
     private let lettuceModes = [
         Mode.lettuce_village,
         Mode.lettuce_bounty_board,
@@ -66,12 +65,13 @@ struct LoadingScreenHandler: LogEventParser {
             let currentMode = game.currentMode
             let previousMode = game.previousMode
             DispatchQueue.main.async {
+                AccountProgressModel.shared.setMenuActive(currentMode.map { Game.experienceMenuModes.contains($0) } ?? false)
                 if let counter = game.windowManager.rootOverlay?.viewModel.experienceCounter {
-                    if let currentMode, showExperienceDuringMode.contains(currentMode) {
+                    if let currentMode, Game.experienceMenuModes.contains(currentMode) {
                         counter.show()
                         game.updateExperienceOverlay()
                     } else {
-                        if let previousMode, showExperienceDuringMode.contains(previousMode) {
+                        if let previousMode, Game.experienceMenuModes.contains(previousMode) {
                             counter.hide()
                             game.updateExperienceOverlay()
                         }
@@ -80,6 +80,7 @@ struct LoadingScreenHandler: LogEventParser {
             }
         
             if game.previousMode == .gameplay && game.currentMode != .gameplay {
+                DispatchQueue.main.async { AccountProgressModel.shared.endMatch() }
                 game.inMenu()
             }
             

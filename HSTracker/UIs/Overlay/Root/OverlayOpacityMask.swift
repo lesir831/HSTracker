@@ -47,6 +47,14 @@ class OverlayOpacityMask: ObservableObject {
     private var batchInProgress = false
     private var disabled = false
 
+    /// Hit testing must agree with the visible cut-outs; otherwise a hidden
+    /// button can intercept clicks intended for Hearthstone's own dialogs.
+    func hides(_ point: CGPoint, canvasSize: CGSize) -> Bool {
+        guard !Self.debugShowRegions, canvasSize.width > 0, canvasSize.height > 0 else { return false }
+        let normalized = CGPoint(x: point.x / canvasSize.width, y: point.y / canvasSize.height)
+        return maskedRects.contains { $0.contains(normalized) }
+    }
+
     /// Suppress mask updates and change events until `body` returns.
     ///
     /// HDT spells this `using var _ = StartBatchUpdate()`, deferring to the end

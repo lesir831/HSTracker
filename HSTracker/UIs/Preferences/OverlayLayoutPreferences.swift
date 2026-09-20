@@ -45,6 +45,8 @@ struct OverlayLayoutPreferencesView: View {
             Divider()
             SecretHelperLayoutSection()
             Divider()
+            AccountQuestOverlayPreferencesSection()
+            Divider()
             resetRow
         }
         .padding(20)
@@ -67,8 +69,69 @@ struct OverlayLayoutPreferencesView: View {
                 Settings.secretsPanelTop = 5
                 Settings.secretsPanelLeft = 15
                 Settings.secretsPanelHeight = 40
+                Settings.accountQuestOverlayHorizontal = 99
+                Settings.accountQuestOverlayVertical = 93
                 AppDelegate.instance().coreManager?.game.updateAllTrackers()
             }
+        }
+    }
+}
+
+struct AccountQuestOverlayPreferencesSection: View {
+    @SwiftUI.State private var enabled = Settings.accountQuestOverlayEnabled
+    @SwiftUI.State private var showTraditional = Settings.accountQuestShowTraditional
+    @SwiftUI.State private var showBattlegrounds = Settings.accountQuestShowBattlegrounds
+    @SwiftUI.State private var pinned = Settings.accountQuestOverlayPinned
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(String.localizedString("AccountProgress_OverlayTitle", comment: ""))
+                .font(.headline)
+            Toggle(String.localizedString("AccountProgress_OverlayEnabled", comment: ""),
+                   isOn: Binding(get: { enabled }, set: { newValue in
+                       enabled = newValue
+                       AccountProgressModel.shared.setOverlayEnabled(newValue)
+                   }))
+            Toggle(String.localizedString("AccountProgress_OverlayTraditional", comment: ""),
+                   isOn: Binding(get: { showTraditional }, set: { newValue in
+                       showTraditional = newValue
+                       AccountProgressModel.shared.setQuestCategories(showTraditional: newValue,
+                                                                      showBattlegrounds: showBattlegrounds)
+                   }))
+                .disabled(!enabled)
+            Toggle(String.localizedString("AccountProgress_OverlayBattlegrounds", comment: ""),
+                   isOn: Binding(get: { showBattlegrounds }, set: { newValue in
+                       showBattlegrounds = newValue
+                       AccountProgressModel.shared.setQuestCategories(showTraditional: showTraditional,
+                                                                      showBattlegrounds: newValue)
+                   }))
+                .disabled(!enabled)
+            Text(String.localizedString("AccountProgress_OverlayQuestTypesHelp", comment: ""))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Toggle(String.localizedString("AccountProgress_OverlayPinned", comment: ""),
+                   isOn: Binding(get: { pinned }, set: { newValue in
+                       pinned = newValue
+                       Settings.accountQuestOverlayPinned = newValue
+                   }))
+                .disabled(!enabled)
+            Text(String.localizedString("AccountProgress_OverlayHelp", comment: ""))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name(rawValue: Settings.account_quest_overlay_enabled))) { _ in
+            enabled = Settings.accountQuestOverlayEnabled
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name(rawValue: Settings.account_quest_show_traditional))) { _ in
+            showTraditional = Settings.accountQuestShowTraditional
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name(rawValue: Settings.account_quest_show_battlegrounds))) { _ in
+            showBattlegrounds = Settings.accountQuestShowBattlegrounds
+        }
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name(rawValue: Settings.account_quest_overlay_pinned))) { _ in
+            pinned = Settings.accountQuestOverlayPinned
         }
     }
 }
