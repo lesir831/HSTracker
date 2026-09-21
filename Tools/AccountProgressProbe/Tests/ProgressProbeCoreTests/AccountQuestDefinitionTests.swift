@@ -43,11 +43,25 @@ final class AccountQuestDefinitionTests: XCTestCase {
         let data = Data(#"{"id":84,"name":"","description":"Task","quota":25,"rewardTrackType":1,"questPoolID":1}"#.utf8)
         let definition = try JSONDecoder().decode(AccountNativeQuestDefinition.self, from: data)
         XCTAssertNil(definition.poolType)
+        XCTAssertNil(definition.isChainQuest)
         XCTAssertEqual(AccountQuestPoolType.daily.rawValue, 1)
         XCTAssertEqual(AccountQuestPoolType.weekly.rawValue, 2)
         XCTAssertEqual(AccountQuestPoolType.event.rawValue, 3)
         XCTAssertEqual(AccountQuestStatus.new.rawValue, 1)
         XCTAssertEqual(AccountQuestStatus.active.rawValue, 2)
         XCTAssertEqual(AccountQuestStatus.expired.rawValue, 9)
+    }
+
+    func testChainMembershipRoundTripsWithoutAssigningAnotherQuest() throws {
+        for membership: Bool? in [true, false, nil] {
+            let definition = AccountNativeQuestDefinition(id: 1890, name: "Chain terminal", description: "Summon $q",
+                quota: 500, rewardTrackType: 7, questPoolID: 20, poolType: 3, isChainQuest: membership)
+            let snapshot = AccountProgressSnapshot(capturedAt: Date(timeIntervalSinceReferenceDate: 0),
+                quests: [.init(id: 1890, progress: 123, status: 2)], achievements: [], definitions: [],
+                nativeQuestDefinitions: [definition])
+            let decoded = try JSONDecoder().decode(AccountProgressSnapshot.self, from: JSONEncoder().encode(snapshot))
+            XCTAssertEqual(decoded.nativeQuestDefinitions.first?.isChainQuest, membership)
+            XCTAssertEqual(decoded.quests, snapshot.quests)
+        }
     }
 }

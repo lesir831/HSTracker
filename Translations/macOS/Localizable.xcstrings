@@ -1,6 +1,57 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "AccountProgress_CategoryBattlegroundsEvent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Battlegrounds event"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "战棋活动"
+          }
+        }
+      }
+    },
+    "AccountProgress_CategoryEventChain" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Event quest chain"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动主线"
+          }
+        }
+      }
+    },
+    "AccountProgress_CategoryEvent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Event quest"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "活动任务"
+          }
+        }
+      }
+    },
     "AccountProgress_ConfirmedRefreshNote" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -627,13 +678,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Traditional Hearthstone quests use the rewards track shared by Standard, Wild, and Tavern Brawl."
+            "value" : "Traditional Hearthstone includes shared Standard, Wild and Tavern Brawl quests, plus event quests. Event bonuses use progress confirmed by the game."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "普通炉石任务属于标准、狂野和乱斗等模式共用的奖励路线。"
+            "value" : "普通炉石包含标准、狂野和乱斗等模式的共用任务，以及活动任务。活动加成进度以游戏确认为准。"
           }
         }
       }
@@ -759,13 +810,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Daily & weekly quests"
+            "value" : "Quest progress"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每日与每周任务"
+            "value" : "任务进度"
           }
         }
       }

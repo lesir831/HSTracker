@@ -6,6 +6,7 @@ import AppKit
 struct AccountQuestOverlayRow: Identifiable, Equatable {
     let id: Int
     let title: String
+    let detail: String
     let confirmed: Int
     let total: Int
     let quota: Int
@@ -13,12 +14,14 @@ struct AccountQuestOverlayRow: Identifiable, Equatable {
     let schedule: AccountQuestSchedule
     let rewardTrackType: Int?
     let status: Int
+    let isChainQuest: Bool?
 
     init(id: Int, title: String, confirmed: Int, total: Int, quota: Int,
          estimatedDelta: Int?, schedule: AccountQuestSchedule = .unknown,
-         rewardTrackType: Int? = nil, status: Int = 0) {
+         rewardTrackType: Int? = nil, status: Int = 0, detail: String = "", isChainQuest: Bool? = nil) {
         self.id = id
         self.title = title
+        self.detail = detail
         self.confirmed = confirmed
         self.total = total
         self.quota = quota
@@ -26,6 +29,7 @@ struct AccountQuestOverlayRow: Identifiable, Equatable {
         self.schedule = schedule
         self.rewardTrackType = rewardTrackType
         self.status = status
+        self.isChainQuest = isChainQuest
     }
 
     var fraction: Double {
@@ -40,12 +44,18 @@ struct AccountQuestOverlayRow: Identifiable, Equatable {
     }
 
     var categoryKey: String {
+        if rewardTrackType == 7 || schedule == .event {
+            if rewardTrackType == 2 { return "AccountProgress_CategoryBattlegroundsEvent" }
+            if isChainQuest == true { return "AccountProgress_CategoryEventChain" }
+            if schedule == .daily { return "AccountProgress_CategoryEventDaily" }
+            if schedule == .weekly { return "AccountProgress_CategoryEventWeekly" }
+            // Non-chain membership alone does not prove a daily reset schedule.
+            return "AccountProgress_CategoryEvent"
+        }
         switch (rewardTrackType, schedule) {
         case (2, .daily): return "AccountProgress_CategoryBattlegroundsDaily"
         case (2, .weekly): return "AccountProgress_CategoryBattlegroundsWeekly"
         case (2, _): return "AccountProgress_CategoryBattlegroundsUnknown"
-        case (7, .daily): return "AccountProgress_CategoryEventDaily"
-        case (7, .weekly): return "AccountProgress_CategoryEventWeekly"
         case (_, .daily): return "AccountProgress_CategoryDaily"
         case (_, .weekly): return "AccountProgress_CategoryWeekly"
         default: return "AccountProgress_CategoryUnknown"
@@ -57,7 +67,11 @@ struct AccountQuestOverlayRow: Identifiable, Equatable {
             with: CGSize(width: 304, height: CGFloat.greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             attributes: [.font: NSFont.systemFont(ofSize: 14, weight: .semibold)])
-        return AccountQuestOverlayLayout.rowHeight + max(0, ceil(measured.height) - 36)
+        let detailHeight = detail.isEmpty ? 0 : ceil((detail as NSString).boundingRect(
+            with: CGSize(width: 304, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: NSFont.systemFont(ofSize: 12)]).height) + 3
+        return AccountQuestOverlayLayout.rowHeight + max(0, ceil(measured.height) - 36) + detailHeight
     }
 
     static func rows(snapshot: AccountProgressSnapshot?,
@@ -75,8 +89,11 @@ struct AccountQuestOverlayRow: Identifiable, Equatable {
             let categoryEnabled = definition?.rewardTrackType == 2 ? showBattlegrounds : showTraditional
             guard categoryEnabled else { return nil }
             let quota = max(0, definition?.quota ?? 0)
-            let progress = estimate.progress(for: quest, quota: quota)
-            let description = plainText(definition?.text ?? "")
+            // Event bonuses/co-op credit remain server-authoritative, even if
+            // a future event reuses a known ordinary quest's ID and quota.
+            let progress = definition?.isEvent == true ? nil : estimate.progress(for: quest, quota: quota)
+            let parts = displayText(definition?.text ?? "", separateNote: definition?.isEvent == true)
+            let description = parts.objective
             let name = plainText(definition?.name ?? "")
             return Self(id: quest.id,
                         title: !description.isEmpty ? description : (!name.isEmpty ? name : "#\(quest.id)"),
@@ -86,7 +103,7 @@ struct AccountQuestOverlayRow: Identifiable, Equatable {
                         estimatedDelta: progress?.delta,
                         schedule: definition?.schedule ?? .unknown,
                         rewardTrackType: definition?.rewardTrackType,
-                        status: quest.status)
+                        status: quest.status, detail: parts.note, isChainQuest: definition?.isChainQuest)
         }
     }
 
@@ -98,10 +115,24 @@ struct AccountQuestOverlayRow: Identifiable, Equatable {
             // Older caches and the public definition feed have no schedule.
             // Keep those account-assigned tasks as unclassified until native
             // metadata arrives; never infer a period from their wording or XP.
-            return definition.rewardTrackType == 1 || definition.rewardTrackType == 2
+            return [1, 2, 7].contains(definition.rewardTrackType)
         case .event:
-            return false
+            return true
         }
+    }
+
+    /// Split the client's trailing italic note for display, never to evaluate
+    /// translated rules. Unknown formats remain visible in the full objective.
+    private static func displayText(_ value: String, separateNote: Bool) -> (objective: String, note: String) {
+        guard separateNote,
+              let regex = try? NSRegularExpression(pattern: "(?is)<i>([^<]*(?:<(?!/?i>)[^>]*>[^<]*)*)</i>\\s*$"),
+              let match = regex.firstMatch(in: value, range: NSRange(value.startIndex..., in: value)),
+              let full = Range(match.range, in: value), let note = Range(match.range(at: 1), in: value) else {
+            return (plainText(value), "")
+        }
+        let objective = plainText(String(value[..<full.lowerBound]))
+        guard !objective.isEmpty else { return (plainText(value), "") }
+        return (objective, plainText(String(value[note])))
     }
 
     private static func plainText(_ value: String) -> String {

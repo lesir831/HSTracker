@@ -140,6 +140,9 @@ private struct AccountProgressView: View {
         return HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(quest.title.hasPrefix("#") ? text("AccountProgress_QuestDetailsPending") : quest.title)
+                if !quest.detail.isEmpty {
+                    Text(quest.detail).font(.caption).foregroundColor(.secondary)
+                }
                 Text(text(quest.categoryKey)).font(.caption).foregroundColor(.secondary)
             }
             Spacer()

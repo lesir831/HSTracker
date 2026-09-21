@@ -234,6 +234,9 @@ public final class MonoRuntime {
         }
         let poolTable = try dbfRecords("QuestPool", ids: Set(questPools.values.filter { $0 > 0 }))
         let pools = poolTable.records
+        let chainIDs: Set<Int>?
+        do { chainIDs = try readQuestChainIDs() }
+        catch ProbeError.unavailable { chainIDs = nil }
         var localeIndex: Int?
         let definitions = try quests.keys.sorted().map { id in
             guard let record = quests[id], let poolID = questPools[id] else {
@@ -251,7 +254,8 @@ public final class MonoRuntime {
             return AccountNativeQuestDefinition(id: id,
                 name: try localizedDbfString(memory.uint(at: objectField(record, "m_name")), localeIndex: &localeIndex),
                 description: try localizedDbfString(memory.uint(at: objectField(record, "m_description")), localeIndex: &localeIndex),
-                quota: quota, rewardTrackType: rewardTrack, questPoolID: poolID, poolType: poolType)
+                quota: quota, rewardTrackType: rewardTrack, questPoolID: poolID, poolType: poolType,
+                isChainQuest: chainIDs.map { $0.contains(id) })
         }
         // Definitions and pool classification must come from one stable set of
         // tables. Locale changes reload localized DBF data independently.
@@ -262,6 +266,38 @@ public final class MonoRuntime {
             throw ProbeError.unavailable("questLocaleChangedDuringRead")
         }
         return definitions
+    }
+
+    /// InitializeQuestAssets adds both ends of every link to m_chainQuestIds
+    /// and stores the same links in m_chainQuestIdToPrevious. Reading both keys
+    /// and values also recognizes the last step, whose NextInChain is zero.
+    /// This describes membership only; it never assigns a future quest.
+    private func readQuestChainIDs() throws -> Set<Int>? {
+        guard let manager = try progressServices()["QuestManager"] else {
+            throw ProbeError.unavailable("questServiceNotReady")
+        }
+        let dictionary = try memory.uint(at: objectField(manager, "m_chainQuestIdToPrevious"))
+        guard dictionary != 0 else { return nil }
+        let version = try integer(dictionary, "_version")
+        var ids = Set<Int>()
+        for entry in try dictionaryEntries(dictionary) {
+            guard entry.keyType == 8, entry.valueType == 8 else {
+                throw ProbeError.invalid("Unexpected quest chain dictionary types")
+            }
+            let current = Int(Int32(bitPattern: UInt32(try memory.uint(at: entry.keyAddress, width: 4))))
+            let previous = Int(Int32(bitPattern: UInt32(try memory.uint(at: entry.valueAddress, width: 4))))
+            guard current > 0, previous > 0 else { throw ProbeError.invalid("Invalid quest chain link") }
+            ids.insert(current)
+            ids.insert(previous)
+        }
+        guard try progressServices()["QuestManager"] == manager,
+              try memory.uint(at: objectField(manager, "m_chainQuestIdToPrevious")) == dictionary,
+              try integer(dictionary, "_version") == version else {
+            throw ProbeError.unavailable("questChainsChangedDuringRead")
+        }
+        // An empty map may precede InitializeQuestAssets; do not claim that
+        // every assigned quest is non-chain while it is still loading.
+        return ids.isEmpty ? nil : ids
     }
 
     private struct DbfRecordSnapshot {

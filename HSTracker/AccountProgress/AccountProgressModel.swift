@@ -308,14 +308,15 @@ final class AccountProgressModel: ObservableObject {
         let currentQuestIDs = Set(snapshot.quests.map(\.id))
         nativeQuestDefinitionsByID = nativeQuestDefinitionsByID.filter { currentQuestIDs.contains($0.key) }
         for native in snapshot.nativeQuestDefinitions where currentQuestIDs.contains(native.id) {
-            if native.poolType == nil, let previous = nativeQuestDefinitionsByID[native.id],
+            if let previous = nativeQuestDefinitionsByID[native.id],
                previous.questPoolID == native.questPoolID {
                 // The quest record and its pool table are optional independent
                 // reads. Reuse a missing cadence only while the pool ID agrees.
                 nativeQuestDefinitionsByID[native.id] = AccountNativeQuestDefinition(
                     id: native.id, name: native.name, description: native.description,
                     quota: native.quota, rewardTrackType: native.rewardTrackType,
-                    questPoolID: native.questPoolID, poolType: previous.poolType)
+                    questPoolID: native.questPoolID, poolType: native.poolType ?? previous.poolType,
+                    isChainQuest: native.isChainQuest ?? previous.isChainQuest)
             } else {
                 nativeQuestDefinitionsByID[native.id] = native
             }
@@ -348,7 +349,7 @@ final class AccountProgressModel: ObservableObject {
                 description: native.description.isEmpty ? (fallback?.description ?? "") : native.description,
                 quota: native.quota, rewardTrackType: native.rewardTrackType,
                 name: native.name.isEmpty ? (fallback?.name ?? "") : native.name,
-                schedule: AccountQuestSchedule(poolType: native.poolType))
+                schedule: AccountQuestSchedule(poolType: native.poolType), isChainQuest: native.isChainQuest)
         }
         questDefinitions = definitions
         let active = session.snapshot?.quests.filter { !(4...9).contains($0.status) } ?? []

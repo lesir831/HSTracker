@@ -3,6 +3,100 @@ import XCTest
 @testable import HSTracker
 
 final class AccountQuestOverlayTests: XCTestCase {
+    func testHistoricalEventCatalogDisplaysOnlyAssignedQuestsAndPreservesAllConditions() throws {
+        let catalog = try HistoricalEventQuestFixtures.load()
+        XCTAssertEqual(catalog.count, 1194)
+        let definitions = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
+        XCTAssertTrue(AccountQuestOverlayRow.rows(snapshot: snapshot([]), definitions: definitions,
+            estimate: AccountQuestEstimate(), hasVerifiedAccount: true).isEmpty)
+        let assigned = catalog.enumerated().map { quest($0.element.id, min($0.offset % 17, $0.element.quota)) }
+        let frame = snapshot(assigned)
+        let rows = AccountQuestOverlayRow.rows(snapshot: frame, definitions: definitions,
+            estimate: estimate(for: frame), hasVerifiedAccount: true)
+        XCTAssertEqual(rows.count, 1194)
+        XCTAssertEqual(rows.map(\.id), assigned.map(\.id))
+        XCTAssertEqual(rows.map(\.total), assigned.map(\.progress))
+        for (row, definition) in zip(rows, catalog) {
+            XCTAssertEqual(row.quota, definition.quota)
+            XCTAssertEqual(row.categoryKey, "AccountProgress_CategoryEvent")
+            XCTAssertNil(row.estimatedDelta)
+            // Splitting a bonus note must not lose class, set, mode, card
+            // attributes, co-op participation or win conditions.
+            let expected = definition.text.replacingOccurrences(of: "<[^>]+>|\\s|\\[x\\]", with: "", options: .regularExpression)
+            let actual = (row.title + row.detail).replacingOccurrences(of: "\\s", with: "", options: .regularExpression)
+            XCTAssertEqual(actual, expected, "Quest \(row.id)")
+        }
+    }
+
+    func testEventBonusExamplesRemainAuthoritativeAndSeparateFromObjectives() throws {
+        let definitions = Dictionary(uniqueKeysWithValues: try HistoricalEventQuestFixtures.load().map { ($0.id, $0) })
+        // Draw, summon, kill, set, class, keyword, school, mode, win and co-op.
+        let examples = [1904, 1890, 1881, 1250, 1923, 1924, 1935, 1929, 1921]
+        let frame = snapshot(examples.map { quest($0, 3) })
+        var live = estimate(for: frame)
+        live.observe(.heroPowerUses, total: 50, matchID: "match", isLocalPlayer: true)
+        live.observe(.manaSpent, total: 500, matchID: "match", isLocalPlayer: true)
+        let rows = AccountQuestOverlayRow.rows(snapshot: frame, definitions: definitions,
+            estimate: live, hasVerifiedAccount: true)
+        XCTAssertEqual(rows.map(\.id), examples)
+        XCTAssertTrue(rows.allSatisfy { $0.total == 3 && $0.estimatedDelta == nil })
+        XCTAssertTrue(rows.allSatisfy { $0.detail.hasPrefix("（计数加成：") })
+        XCTAssertEqual(rows[0].title, "抽30张牌。")
+        XCTAssertEqual(rows[0].detail, "（计数加成：排名对战+1）")
+        XCTAssertTrue(rows[3].detail.contains("安戈洛龟途牌+2"))
+        XCTAssertTrue(rows[4].detail.contains("胜场+1，战士+1"))
+        XCTAssertTrue(rows[5].detail.contains("亡语+1，术士+1"))
+        XCTAssertTrue(rows[6].detail.contains("暗影+1，火焰+1"))
+        XCTAssertTrue(rows[8].title.hasPrefix("合作："))
+        XCTAssertGreaterThan(rows[3].displayHeight, AccountQuestOverlayLayout.rowHeight)
+    }
+
+    func testEventChainClassificationRequiresNativeEvidenceAndNeverGuessesDaily() {
+        let cases: [(AccountQuestSchedule, Bool?, String)] = [
+            (.event, true, "AccountProgress_CategoryEventChain"),
+            (.event, false, "AccountProgress_CategoryEvent"),
+            (.event, nil, "AccountProgress_CategoryEvent"),
+            (.daily, false, "AccountProgress_CategoryEventDaily"),
+            (.weekly, false, "AccountProgress_CategoryEventWeekly"),
+            (.unknown, nil, "AccountProgress_CategoryEvent")
+        ]
+        for item in cases {
+            let definition = AccountQuestDefinition(id: 1890, description: "Summon $q", quota: 500,
+                rewardTrackType: 7, schedule: item.0, isChainQuest: item.1)
+            let rows = AccountQuestOverlayRow.rows(snapshot: snapshot([quest(1890, 0)]),
+                definitions: [1890: definition], estimate: AccountQuestEstimate(), hasVerifiedAccount: true)
+            XCTAssertEqual(rows.first?.categoryKey, item.2)
+        }
+    }
+
+    func testEventDefinitionCannotReuseOrdinaryQuestEstimateOrResurrectExpiredTasks() {
+        let frame = snapshot([quest(1032, 2), .init(id: 1890, progress: 15, status: 9),
+                              .init(id: 1881, progress: 75, status: 4)])
+        let definitions = [1032: definition(1032, quota: 20, track: 7, schedule: .event),
+                           1890: definition(1890, quota: 500, track: 7, schedule: .event),
+                           1881: definition(1881, quota: 75, track: 7, schedule: .event)]
+        var live = estimate(for: frame)
+        live.observe(.heroPowerUses, total: 10, matchID: "match", isLocalPlayer: true)
+        let rows = AccountQuestOverlayRow.rows(snapshot: frame, definitions: definitions,
+            estimate: live, hasVerifiedAccount: true)
+        XCTAssertEqual(rows.map(\.id), [1032])
+        XCTAssertEqual(rows.first?.total, 2)
+        XCTAssertNil(rows.first?.estimatedDelta)
+    }
+
+    func testEventNotesDoNotDependOnLanguageAndUnknownMarkupKeepsItsText() {
+        let texts = ["Draw $q cards.<i>(Bonus: Ranked +1)</i>",
+                     "Draw $q cards. Bonus: Ranked +1", "<i>Only a note</i>",
+                     "Draw $q cards.<i>(Bonus: <b>Ranked</b> +1)</i>"]
+        let definitions = Dictionary(uniqueKeysWithValues: texts.enumerated().map {
+            ($0.offset, definition($0.offset, quota: 30, track: 7, description: $0.element))
+        })
+        let rows = AccountQuestOverlayRow.rows(snapshot: snapshot(texts.indices.map { quest($0, 0) }),
+            definitions: definitions, estimate: AccountQuestEstimate(), hasVerifiedAccount: true)
+        XCTAssertEqual(rows.map(\.detail), ["(Bonus: Ranked +1)", "", "", "(Bonus: Ranked +1)"])
+        XCTAssertEqual(rows.map(\.title), ["Draw 30 cards.", "Draw 30 cards. Bonus: Ranked +1", "Only a note", "Draw 30 cards."])
+    }
+
     func testMaskedGameDialogsKeepHiddenButtonsClickThrough() {
         let mask = OverlayOpacityMask()
         let size = CGSize(width: 1920, height: 1080)
@@ -99,17 +193,19 @@ final class AccountQuestOverlayTests: XCTestCase {
         let rows = AccountQuestOverlayRow.rows(snapshot: snapshot, definitions: definitions,
                                               estimate: estimate(for: snapshot), hasVerifiedAccount: true,
                                               showTraditional: true, showBattlegrounds: true)
-        XCTAssertEqual(rows.map(\.id), Array(20001...20008) + Array(20011...20014))
+        XCTAssertEqual(rows.map(\.id), Array(20001...20016))
         XCTAssertEqual(rows.map(\.schedule), [.daily, .weekly, .daily, .weekly, .daily, .weekly,
-                                             .unknown, .unknown, .daily, .weekly, .daily, .weekly])
-        XCTAssertEqual(rows.compactMap(\.rewardTrackType), [1, 1, 2, 2, 7, 7, 1, 2, 8, 9, 0, 99])
+                                             .unknown, .unknown, .event, .unknown, .daily, .weekly, .daily, .weekly, .event, .event])
+        XCTAssertEqual(rows.compactMap(\.rewardTrackType), [1, 1, 2, 2, 7, 7, 1, 2, 7, 7, 8, 9, 0, 99, 1, 2])
         XCTAssertEqual(rows.map(\.categoryKey), [
             "AccountProgress_CategoryDaily", "AccountProgress_CategoryWeekly",
             "AccountProgress_CategoryBattlegroundsDaily", "AccountProgress_CategoryBattlegroundsWeekly",
             "AccountProgress_CategoryEventDaily", "AccountProgress_CategoryEventWeekly",
             "AccountProgress_CategoryUnknown", "AccountProgress_CategoryBattlegroundsUnknown",
+            "AccountProgress_CategoryEvent", "AccountProgress_CategoryEvent",
             "AccountProgress_CategoryDaily", "AccountProgress_CategoryWeekly",
-            "AccountProgress_CategoryDaily", "AccountProgress_CategoryWeekly"
+            "AccountProgress_CategoryDaily", "AccountProgress_CategoryWeekly",
+            "AccountProgress_CategoryEvent", "AccountProgress_CategoryBattlegroundsEvent"
         ])
         XCTAssertTrue(rows.allSatisfy { $0.estimatedDelta == nil })
     }
@@ -130,7 +226,7 @@ final class AccountQuestOverlayTests: XCTestCase {
         ]
         var estimate = estimate(for: snapshot)
         estimate.observe(.manaSpent, total: 7, matchID: "match", isLocalPlayer: true)
-        let traditionalIDs = [1035, 24003, 24004, 24005]
+        let traditionalIDs = [1035, 24003, 24004, 24005, 24007]
         let battlegroundIDs = [24001, 24002, 24006]
         let defaults = AccountQuestOverlayRow.rows(snapshot: snapshot, definitions: definitions,
                                                    estimate: estimate, hasVerifiedAccount: true)
@@ -142,7 +238,7 @@ final class AccountQuestOverlayTests: XCTestCase {
         let cases: [(traditional: Bool, battlegrounds: Bool, ids: [Int])] = [
             (true, false, traditionalIDs),
             (false, true, battlegroundIDs),
-            (true, true, Array(quests.dropLast()).map(\.id)),
+            (true, true, quests.map(\.id)),
             (false, false, [])
         ]
         for option in cases {
@@ -152,7 +248,6 @@ final class AccountQuestOverlayTests: XCTestCase {
                                                   showBattlegrounds: option.battlegrounds)
             XCTAssertEqual(rows.map(\.id), option.ids)
             XCTAssertEqual(rows.map(\.confirmed), quests.filter { option.ids.contains($0.id) }.map(\.progress))
-            XCTAssertFalse(rows.contains { $0.id == 24007 })
         }
         XCTAssertEqual(snapshot.quests, quests)
         let restored = AccountQuestOverlayRow.rows(snapshot: snapshot, definitions: definitions,
@@ -381,5 +476,14 @@ final class AccountQuestOverlayTests: XCTestCase {
                                  file: file, line: line)
         XCTAssertGreaterThan(frame.width, 0, file: file, line: line)
         XCTAssertGreaterThan(frame.height, 0, file: file, line: line)
+    }
+}
+
+/// Public historical descriptions; all account progress used by tests is synthetic.
+enum HistoricalEventQuestFixtures {
+    static func load() throws -> [AccountQuestDefinition] {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/event-quests.zhCN.json")
+        return try JSONDecoder().decode(AccountQuestDefinitions.self, from: Data(contentsOf: url)).quests
     }
 }

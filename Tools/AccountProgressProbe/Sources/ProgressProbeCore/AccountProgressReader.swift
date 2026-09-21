@@ -33,9 +33,12 @@ public struct AccountNativeQuestDefinition: Codable, Equatable, Identifiable {
     public let rewardTrackType: Int
     public let questPoolID: Int
     public let poolType: Int?
+    /// Membership in the client's quest chain, including its terminal quest.
+    /// Nil means the optional chain metadata was unavailable (including old caches).
+    public let isChainQuest: Bool?
 
     public init(id: Int, name: String, description: String, quota: Int,
-                rewardTrackType: Int, questPoolID: Int, poolType: Int?) {
+                rewardTrackType: Int, questPoolID: Int, poolType: Int?, isChainQuest: Bool? = nil) {
         self.id = id
         self.name = name
         self.description = description
@@ -43,6 +46,7 @@ public struct AccountNativeQuestDefinition: Codable, Equatable, Identifiable {
         self.rewardTrackType = rewardTrackType
         self.questPoolID = questPoolID
         self.poolType = poolType
+        self.isChainQuest = isChainQuest
     }
 }
 

@@ -142,6 +142,12 @@ struct AccountQuestOverlayRowView: View {
                 .foregroundColor(Color(hex: "#302213"))
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(minHeight: 36, alignment: .topLeading)
+            if !row.detail.isEmpty {
+                Text(row.detail)
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "#493824"))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             progressBar
             HStack(spacing: 4) {
                 Text(text(row.categoryKey) + " · " + statusText)

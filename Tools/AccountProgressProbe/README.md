@@ -245,10 +245,8 @@ Only the two verified quest IDs described above have local live estimates.
 
 For older caches or unavailable native metadata, known ordinary/Battlegrounds
 tasks remain visible as unclassified quests. The public feed has no reliable
-cadence and is never used to guess daily versus weekly. Native `EVENT` pools are
-excluded from this recurring-task list: their metadata does not yet reliably
-distinguish an event's main quest chain from its daily tasks. Full event-chain
-support is a separate extension.
+cadence and is never used to guess daily versus weekly. Assigned event tasks
+are also displayed, with the classification rules below.
 
 Within one verified account, a temporary metadata failure retains known native
 definitions only for quests still present in the latest account snapshot. A
@@ -279,3 +277,72 @@ Chinese text and matching confirmed progress. The rendered panel fit the rows;
 clicking the bar closed and reopened the list. The game's own quest journal also
 showed matching ordinary daily tasks and progress. This verification did not
 start a new match.
+
+## Event quest display (offline integration)
+
+The shared projection now includes assigned `EVENT` pool quests and assigned
+event reward-track (`7`) quests even when their pool metadata is temporarily
+missing. The public catalog is only a definition lookup: a historical quest or
+future chain step never appears without a matching account quest state. The
+existing traditional-task preference includes these event quests; reward-track
+`2` still follows the independent Battlegrounds preference. The panel heading is
+now “Quest progress” in both the menu and match overlays.
+
+Classification uses client metadata, not IDs, XP amounts, quest names or quotas:
+
+- The installed client's `QuestManager.InitializeQuestAssets` inserts both ends
+  of each `NextInChain` edge into `m_chainQuestIds`, and the same edge into
+  `m_chainQuestIdToPrevious`. The reader uses both keys and values of the latter
+  dictionary, including terminal steps. Dictionary types, IDs, version and
+  object identity are checked; an uninitialized/empty map stays unknown.
+- `QuestManager.IsChainQuest` uses that membership, and
+  `QuestLog.UpdateEventQuestList` uses `SortChainQuestsToFront`. An assigned event
+  with verified membership is labeled “Event quest chain”.
+- Explicit `DAILY` / `WEEKLY` metadata receives the corresponding event label.
+  Other `EVENT` quests retain the generic “Event quest” label. A non-chain quest
+  is **not** assumed to reset daily. Missing chain metadata can reuse the previous
+  value only within the same account, quest ID and pool; explicit false, pool
+  changes, removal, account changes and closure invalidate that fallback.
+
+These field/method relationships were inspected as metadata/IL only in the
+installed `Assembly-CSharp.dll`, MVID `8b199bd2-af87-4560-b20a-110b24bdc14f`.
+The metadata tool can reproduce the inspection with `QuestManager QuestLog
+QuestDbfRecord QuestPoolDbfRecord --il`; it never invokes game code. The optional
+`isChainQuest` field is backward compatible with older snapshot JSON.
+
+Trailing `<i>` notes in event descriptions have their own smaller, wrapping text
+below the objective. Other formats retain their complete text. This presents
+set/class/mode/card-attribute/win bonuses and co-op requirements without parsing
+translated prose as executable rules. Row heights include both text blocks.
+
+| Historical sample | Coverage in this integration |
+| --- | --- |
+| 1904: draw; 1890: summon; 1881: destroy minions | Objective, quota and confirmed progress |
+| 1250: set +2, Ranked +1, Kindred +1 | Preserve the complete bonus note |
+| 1923 / 1929: games, Ranked, wins and class | Preserve all conditions, use the confirmed aggregate |
+| 1924: Deathrattle/class; 1935: spell schools/set | Preserve attribute and class/set conditions |
+| 1921: cooperative Coin plays | Preserve co-op participation; do not substitute local-player totals |
+
+Event progress is **snapshot-based**, including all credit already calculated by
+the game. Local additive/multiplicative bonus estimation is not implemented;
+event rows explicitly bypass the two ordinary-quest estimates, even on a reused
+ID/quota. Match rows say that progress updates after settlement. A later server
+snapshot replaces the aggregate once, without multiplying or adding it again.
+
+`HSTrackerTests/Fixtures/event-quests.zhCN.json` preserves all 1,194 event
+definitions from the previously collected public Firestone catalog, with source
+URL, collection date and the original download's SHA-256. It contains no account
+data. Tests synthesize assignments/progress, check every definition's text and
+quota, and exercise targeted bonus examples, native classification, settlement,
+chain replacement, expired/rewarded removal, metadata loss and account switching.
+The SwiftUI test renders production views to
+`/tmp/HSTracker-QuestOverlay-QA/events.png`; its native cadence/membership values
+are synthetic fixtures, not observed historical event assignments.
+
+No live event or real-game interface verification is performed for this
+extension: no event is currently available, and the user explicitly waived that
+step. Offline tests and rendering do not validate the event runtime reader or
+the game's bonus accounting in an active event.
+
+Validation for this extension: 53 selected app tests and 22 probe-core tests
+passed; Release build and strict application signature verification passed.

@@ -21,6 +21,108 @@ final class AccountProgressLifecycleTests: XCTestCase {
 
     private let quest = AccountProgressRecord(id: 1035, progress: 176, status: 2)
 
+    func testEventSettlementChainReplacementAndMetadataRecovery() async throws {
+        let catalog = Dictionary(uniqueKeysWithValues: try HistoricalEventQuestFixtures.load().map { ($0.id, $0) })
+        func native(_ id: Int, chain: Bool?, pool: Int = 20) throws -> AccountNativeQuestDefinition {
+            let item = try XCTUnwrap(catalog[id])
+            return AccountNativeQuestDefinition(id: id, name: item.name, description: item.description,
+                quota: item.quota, rewardTrackType: 7, questPoolID: pool, poolType: 3, isChainQuest: chain)
+        }
+        let first = AccountProgressRecord(id: 1890, progress: 100, status: 2)
+        let daily = AccountProgressRecord(id: 1904, progress: 3, status: 2)
+        let source = Source(metadataReading(quests: [first, daily],
+            definitions: [try native(1890, chain: true), try native(1904, chain: false)]))
+        let model = AccountProgressModel(enabled: true, automaticallyPoll: false, persists: false,
+            definitions: catalog, showTraditionalQuests: true, showBattlegroundsQuests: false, reader: source.read)
+        model.beginMatch("event-game", spectator: false, questEligible: true)
+        await idle(model)
+        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
+        XCTAssertEqual(overlay.rows.map(\.id), [1890, 1904])
+        XCTAssertEqual(overlay.rows.first?.categoryKey, "AccountProgress_CategoryEventChain")
+        model.observeQuest(.manaSpent, total: 100, matchID: "event-game", isLocalPlayer: true)
+        overlay.update()
+        XCTAssertEqual(overlay.rows.map(\.total), [100, 3])
+
+        // An authoritative settlement already includes every applicable bonus.
+        let settled = AccountProgressRecord(id: 1890, progress: 123, status: 2)
+        source.set(metadataReading(quests: [settled, daily], definitions: [try native(1890, chain: nil)]))
+        model.refresh(full: true)
+        await idle(model)
+        overlay.update()
+        XCTAssertEqual(overlay.rows.map(\.total), [123, 3])
+        XCTAssertEqual(overlay.rows.first?.categoryKey, "AccountProgress_CategoryEventChain")
+        XCTAssertNil(model.session.snapshot?.nativeQuestDefinitions.first?.isChainQuest)
+        XCTAssertTrue(overlay.rows.allSatisfy { $0.estimatedDelta == nil })
+
+        // Explicit false and a changed pool replace retained chain membership.
+        source.set(metadataReading(quests: [settled], definitions: [try native(1890, chain: false)]))
+        model.refresh(full: true)
+        await idle(model)
+        XCTAssertEqual(model.questDefinitions[1890]?.isChainQuest, false)
+        source.set(metadataReading(quests: [settled], definitions: [try native(1890, chain: true)]))
+        model.refresh(full: true)
+        await idle(model)
+        source.set(metadataReading(quests: [settled], definitions: [try native(1890, chain: nil, pool: 21)]))
+        model.refresh(full: true)
+        await idle(model)
+        XCTAssertNil(model.questDefinitions[1890]?.isChainQuest)
+
+        // The full catalog does not expose a future chain step before assignment.
+        let next = AccountProgressRecord(id: 1891, progress: 4, status: 2)
+        source.set(metadataReading(quests: [.init(id: 1890, progress: 500, status: 4), next,
+                                          .init(id: 1904, progress: 3, status: 9)],
+            definitions: [try native(1891, chain: true)]))
+        model.refresh(full: true)
+        await idle(model)
+        overlay.update()
+        XCTAssertEqual(overlay.rows.map(\.id), [1891])
+        XCTAssertEqual(overlay.rows.first?.categoryKey, "AccountProgress_CategoryEventChain")
+        // Missing native metadata for a different account cannot borrow chain labels.
+        source.set(metadataReading(scope: "B", quests: [next]))
+        model.refresh(full: true)
+        await idle(model)
+        overlay.update()
+        XCTAssertEqual(overlay.rows.first?.categoryKey, "AccountProgress_CategoryEvent")
+        XCTAssertEqual(overlay.rows.first?.total, 4)
+    }
+
+    func testRenderHistoricalEventObjectivesAndBonuses() async throws {
+        let catalog = try HistoricalEventQuestFixtures.load()
+        let definitions = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
+        let selected = [1890, 1904, 1923]
+        let native = try selected.enumerated().map { index, id -> AccountNativeQuestDefinition in
+            let item = try XCTUnwrap(definitions[id])
+            return AccountNativeQuestDefinition(id: id, name: item.name, description: item.description,
+                quota: item.quota, rewardTrackType: 7, questPoolID: 20 + index,
+                poolType: index == 1 ? 1 : 3, isChainQuest: index != 1)
+        }
+        let source = Source(metadataReading(quests: selected.map { .init(id: $0, progress: 3, status: 2) }, definitions: native))
+        let model = AccountProgressModel(enabled: true, automaticallyPoll: false, persists: false,
+            definitions: definitions, showTraditionalQuests: true, showBattlegroundsQuests: false, reader: source.read)
+        model.refresh(full: true)
+        await idle(model)
+        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
+        XCTAssertEqual(overlay.rows.count, 3)
+        let height = overlay.rows.reduce(AccountQuestOverlayLayout.panelChromeHeight) { $0 + $1.displayHeight }
+        let frame = CGRect(x: 0, y: 0, width: AccountQuestOverlayLayout.panelWidth, height: height)
+        let view = NSHostingView(rootView: AccountQuestOverlayPanel(rows: overlay.rows,
+            status: overlay.status, inMatch: true, needsScroll: false)
+            .frame(width: frame.width, height: frame.height))
+        let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = view
+        view.frame = frame
+        view.layoutSubtreeIfNeeded()
+        try await Task.sleep(nanoseconds: 100_000_000)
+        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        let output = URL(fileURLWithPath: "/tmp/HSTracker-QuestOverlay-QA", isDirectory: true)
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+            .write(to: output.appendingPathComponent("events.png"))
+        window.close()
+    }
+
     func testPlayerTagsDoNotRequireCardControllerTag() {
         let entity = Entity(id: 3)
         entity[.player_id] = 2
@@ -276,7 +378,7 @@ final class AccountProgressLifecycleTests: XCTestCase {
             XCTAssertEqual(model.questDefinitions[quest.id]?.schedule, item.schedule)
             XCTAssertEqual(model.questDefinitions[quest.id]?.quota, item.quota)
             XCTAssertEqual(model.questDefinitions[quest.id]?.text, "Updated task \(item.quota)")
-            XCTAssertEqual(overlay.rows.map(\.id), item.schedule == .unknown ? [] : [quest.id])
+            XCTAssertEqual(overlay.rows.map(\.id), [quest.id])
             XCTAssertEqual(model.session.snapshot?.nativeQuestDefinitions.first?.poolType, item.period)
         }
     }
@@ -306,7 +408,8 @@ final class AccountProgressLifecycleTests: XCTestCase {
             await idle(model)
             XCTAssertEqual(model.questDefinitions[quest.id], fallback)
             let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
-            XCTAssertTrue(overlay.rows.isEmpty)
+            XCTAssertEqual(overlay.rows.map(\.id), [quest.id])
+            XCTAssertEqual(overlay.rows.first?.categoryKey, "AccountProgress_CategoryEvent")
         }
     }
 
@@ -330,7 +433,8 @@ final class AccountProgressLifecycleTests: XCTestCase {
         await idle(model)
         XCTAssertEqual(model.questDefinitions[quest.id], fallback)
         let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
-        XCTAssertTrue(overlay.rows.isEmpty)
+        XCTAssertEqual(overlay.rows.map(\.id), [quest.id])
+        XCTAssertEqual(overlay.rows.first?.categoryKey, "AccountProgress_CategoryEvent")
     }
 
     func testOverlayUpdatesWithoutOpeningDiagnosticWindowAndHidesAtEnd() async throws {

@@ -24,15 +24,17 @@ struct AccountQuestDefinition: Decodable, Equatable {
     let rewardTrackType: Int
     let name: String
     let schedule: AccountQuestSchedule
+    let isChainQuest: Bool?
 
     init(id: Int, description: String, quota: Int, rewardTrackType: Int,
-         name: String = "", schedule: AccountQuestSchedule = .unknown) {
+         name: String = "", schedule: AccountQuestSchedule = .unknown, isChainQuest: Bool? = nil) {
         self.id = id
         self.description = description
         self.quota = quota
         self.rewardTrackType = rewardTrackType
         self.name = name
         self.schedule = schedule
+        self.isChainQuest = isChainQuest
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -49,7 +51,9 @@ struct AccountQuestDefinition: Decodable, Equatable {
         // The public fallback has no cadence metadata. Never infer it from
         // quest IDs, quota, reward XP or translated objective descriptions.
         schedule = .unknown
+        isChainQuest = nil
     }
 
     var text: String { description.replacingOccurrences(of: "$q", with: String(quota)) }
+    var isEvent: Bool { rewardTrackType == 7 || schedule == .event }
 }
