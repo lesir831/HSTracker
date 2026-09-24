@@ -445,6 +445,10 @@ enum GameTag: Int, CaseIterable, Codable {
     titan_ability_used_1 = 3140,
     titan_ability_used_2 = 3141,
     titan_ability_used_3 = 3142,
+    // Battlegrounds gold cap. HDT casts this raw as (GameTag)3148 because
+    // HearthDb has no named constant for it either; maxresources is a flat 99
+    // in Battlegrounds and never moves.
+    bacon_max_gold = 3148,
     is_bacon_duos_exclusive = 3166,
     tourist = 3228,
     gametag_3236 = 3236,
@@ -516,7 +520,18 @@ enum GameTag: Int, CaseIterable, Codable {
     hidden_script_data_6 = 4832,
     dark_gift_entity = 4865,
     bacon_activate_tooltip = 4867,
-    only_gold_in_guide = 4897
+    only_gold_in_guide = 4897,
+    // The Deity the whole lobby builds towards, on the game entity from CREATE_GAME on.
+    bacon_global_old_god_dbid = 4902,
+    // The Deity a Deity Sigil will summon: the sigil carries the Deity's current total
+    // stats, which start at 1/1 and grow with every "Give your Deity +X/+Y". The player
+    // entity carries the same pair as bacon_old_god_attack/bacon_old_god_health, but the
+    // sigil-local ones stay correct per player in duos.
+    bacon_evolution_card_overwrite_atk = 4906,
+    bacon_evolution_card_overwrite_health = 4907,
+    bacon_old_god = 4744,
+    bacon_old_god_attack = 4914,
+    bacon_old_god_health = 4915
 
     static var lookup = [String: GameTag]()
     

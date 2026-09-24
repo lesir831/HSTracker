@@ -327,6 +327,10 @@ final class Settings {
     // browser also shows in the Battlegrounds pre-lobby, before a match starts.
     @UserDefault(key: Settings.show_battlegrounds_guides_pre_lobby, defaultValue: true)
     static var showBattlegroundsGuidesPreLobby: Bool
+    // Mirrors HDT's ShowBattlegroundsMetaSnapshot: whether the Meta Snapshot
+    // link is offered in the pre-lobby guides panel.
+    @UserDefault(key: Settings.show_battlegrounds_meta_snapshot, defaultValue: true)
+    static var showBattlegroundsMetaSnapshot: Bool
     @UserDefault(key: Settings.show_battlecry_deathrattle_on_tiers, defaultValue: true)
     static var showBattlecryDeathrattleOnTiers: Bool
     @UserDefault(key: Settings.show_tavern_spells, defaultValue: true)
@@ -462,6 +466,11 @@ final class Settings {
     static var showPlayerCounters: Bool
     @UserDefault(key: Settings.player_related_cards, defaultValue: true)
     static var showPlayerRelatedCards
+    // Per-card overrides for the opponent's "Related Cards" list, read and written
+    // through RelatedCardVisibilitySettings. Sparse: only cards the user has customised
+    // get an entry, so a newly added related card needs no migration.
+    @UserDefault(key: Settings.related_card_visibility_overrides, defaultValue: [:])
+    static var relatedCardVisibilityOverrides: [String: Int]
     @UserDefault(key: Settings.player_highlight_synergies, defaultValue: true)
     static var showPlayerHighlightSynergies
     // The OutFinder settings pane, porting HDT's Config.Instance.Outfinder* block. These sit
@@ -527,6 +536,11 @@ final class Settings {
     static var showPlayerCorpsesCounter: Bool
     @UserDefault(key: Settings.opponent_max_resources, defaultValue: true)
     static var showOpponentMaxResources: Bool
+    // HDT's HidePlayerMaxResourcesWidgetBattlegrounds, inverted: the widget has
+    // its own switch in Battlegrounds, where the only thing it shows is the
+    // maximum gold counter.
+    @UserDefault(key: Settings.battlegrounds_max_resources, defaultValue: true)
+    static var showBattlegroundsMaxResources: Bool
 
     @UserDefault(key: Settings.show_card_huds, defaultValue: true)
     static var showCardHuds: Bool
@@ -926,6 +940,8 @@ extension Settings {
     static let show_tiers = "show_tiers"
     static let show_battlegrounds_guides = "show_battlegrounds_guides"
     static let show_battlegrounds_guides_pre_lobby = "show_battlegrounds_guides_pre_lobby"
+    static let show_battlegrounds_meta_snapshot = "show_battlegrounds_meta_snapshot"
+    static let related_card_visibility_overrides = "related_card_visibility_overrides"
     static let show_battlecry_deathrattle_on_tiers = "show_battlecry_deathrattle_on_tiers"
     static let show_tavern_spells = "show_tavern_spells"
     static let show_tavern_triples = "show_tavern_triples"
@@ -998,6 +1014,7 @@ extension Settings {
     static let enable_link_opponent_deck = "enable_link_opponent_deck"
     static let opponent_related_cards = "opponent_related_cards"
     static let opponent_max_resources = "opponent_max_resources"
+    static let battlegrounds_max_resources = "battlegrounds_max_resources"
 
     static let remove_cards_from_deck = "remove_cards_from_deck"
     static let highlight_last_drawn = "highlight_last_drawn"

@@ -95,6 +95,8 @@ final class Player {
     private static let InitialMaxHealth = 30
     private static let InitialMaxMana = 10
     private static let InitialMaxHandSize = 10
+    // Battlegrounds gold caps here unless an anomaly or hero effect raises it
+    static let InitialMaxGold = 10
     
     var originalClass: CardClass?
     var currentClass: CardClass?
@@ -105,6 +107,7 @@ final class Player {
     var maxHealth = InitialMaxHealth
     var maxMana = InitialMaxMana
     var maxHandSize = InitialMaxHandSize
+    var maxGold = InitialMaxGold
     var corpsesLeft: Int?
     var heroPowerCount = 0
     var spellsPlayedCount: Int {
@@ -232,6 +235,7 @@ final class Player {
         maxMana = Player.InitialMaxMana
         maxHealth = Player.InitialMaxHealth
         maxHandSize = Player.InitialMaxHandSize
+        maxGold = Player.InitialMaxGold
         corpsesLeft = nil
         hasDeathKnightTourist = false
         spellsPlayedCards.removeAll()
@@ -343,6 +347,13 @@ final class Player {
     
     var currentMana: Int {
         return self.maxMana - (entity?[.resources_used] ?? 0)
+    }
+
+    // The game only starts printing the cap itself once gold reaches it, so the
+    // counter steps aside as soon as RESOURCES has caught up.
+    var shouldShowMaxGold: Bool {
+        return game.isBattlegroundsMatch() && maxGold > Player.InitialMaxGold
+            && maxGold > (game.playerEntity?[.resources] ?? 0)
     }
     
     var displayRevealedCards: [Card] {

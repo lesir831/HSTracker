@@ -95,6 +95,9 @@ struct TagChangeActions {
                 self.opponentMalorneAtkChange(eventHandler: eventHandler, id: id, value: value, previous: prevValue)
             case .maxresources:
                 self.maxResourcesChange(eventHandler: eventHandler, id: id, value: value, previous: prevValue)
+            // bacon_max_gold is the cap, resources the gold the game shows
+            case .bacon_max_gold, .resources:
+                self.maxGoldChange(eventHandler: eventHandler, id: id)
             case .maxhandsize:
                 self.maxHandSizeChange(eventHandler: eventHandler, id: id, value: value, previous: prevValue)
             case .corpses:
@@ -131,6 +134,10 @@ struct TagChangeActions {
                 self.onHeroEntityChange(eventHandler: eventHandler, playerEntityId: id, heroEntityId: value)
             case .next_opponent_player_id:
                 self.onNextOpponentPlayerId(eventHandler: eventHandler, id: id, value: value)
+            case .bacon_evolution_card_id:
+                self.onBaconEvolutionCardIdChange(eventHandler: eventHandler, id: id)
+            case .bacon_global_old_god_dbid:
+                self.updateSessionPlayerDeity(eventHandler)
             default:
                 break
             }
@@ -174,6 +181,21 @@ struct TagChangeActions {
         guard let game = eventHandler as? Game else { return }
         DispatchQueue.main.async {
             game.windowManager.rootOverlay?.viewModel.battlegroundsMinionPinning.setShopVisible(false)
+        }
+    }
+
+    private func onBaconEvolutionCardIdChange(eventHandler: PowerEventHandler, id: Int) {
+        guard eventHandler.isBattlegroundsMatch() else { return }
+        guard let entity = eventHandler.entities[id] else { return }
+        guard entity.cardId == CardIds.NonCollectible.Neutral.SecretDeityDnt
+                && entity.isControlled(by: eventHandler.player.id) else { return }
+        updateSessionPlayerDeity(eventHandler)
+    }
+
+    private func updateSessionPlayerDeity(_ eventHandler: PowerEventHandler) {
+        guard let game = eventHandler as? Game else { return }
+        DispatchQueue.main.async {
+            game.windowManager.rootOverlay?.viewModel.battlegroundsSession.updatePlayerDeity()
         }
     }
 
@@ -681,6 +703,23 @@ struct TagChangeActions {
             eventHandler.handlePlayerMaxManaChange(value)
         } else if entity.isControlled(by: eventHandler.opponent.id) || id == eventHandler.opponent.id {
             eventHandler.handleOpponentMaxManaChange(value)
+        }
+    }
+
+    private func maxGoldChange(eventHandler: PowerEventHandler, id: Int) {
+        if !eventHandler.isBattlegroundsMatch() {
+            return
+        }
+        guard let entity = eventHandler.entities[id] else {
+            return
+        }
+        if !entity.isControlled(by: eventHandler.player.id) {
+            return
+        }
+
+        let maxGold = entity[.bacon_max_gold]
+        if maxGold > 0 {
+            eventHandler.handlePlayerMaxGoldChange(maxGold)
         }
     }
 

@@ -160,6 +160,18 @@ class Game: NSObject, PowerEventHandler {
     func getBattlegroundsBoardStateFor(id: Int) -> BoardSnapshot? {
         return _battlegroundsBoardState?.getSnapshot(entityId: id)
     }
+
+    func getBattlegroundsDeityFor(id: Int) -> DeitySnapshot? {
+        return _battlegroundsDeityState?.getSnapshot(entityId: id)
+    }
+
+    var battlegroundsPlayerDeity: Card? {
+        return _battlegroundsDeityState?.getPlayerDeity()
+    }
+
+    var battlegroundsGlobalOldGod: Card? {
+        return _battlegroundsDeityState?.globalOldGod
+    }
     
     var gameId = ""
     
@@ -181,6 +193,7 @@ class Game: NSObject, PowerEventHandler {
     
     func snapshotBattlegroundsBoardState() {
         _battlegroundsBoardState?.snapshotCurrentBoard()
+        _battlegroundsDeityState?.snapshotCurrentDeity()
     }
     
     var battlegroundsBuddiesEnabled: Bool {
@@ -315,11 +328,13 @@ class Game: NSObject, PowerEventHandler {
 
                         // On the current arena rotation only one legendary is available
                         // per draft, so an active legendary package rules every other
-                        // legendary out of the related cards.
+                        // legendary out of the related cards. A card the user explicitly
+                        // forced on is exempt: that is the point of forcing it.
                         let hasLegendaryPackage = !packageCards.isEmpty
                         relatedCards = cardWithRelatedCards.filter({ card in
                             packageCards.allSatisfy({ $0.id != card.id })
-                                && !(hasLegendaryPackage && card.rarity == .legendary)
+                                && (!(hasLegendaryPackage && card.rarity == .legendary)
+                                    || RelatedCardVisibilitySettings.instance.getOpponent(card.id) == .enabled)
                         }).sortCardList()
                     }
 
@@ -1117,6 +1132,7 @@ class Game: NSObject, PowerEventHandler {
     var currentMode: Mode? = .invalid
     var previousMode: Mode? = .invalid
     private var _battlegroundsBoardState: BattlegroundsBoardState?
+    private var _battlegroundsDeityState: BattlegroundsDeityState?
     var primaryPlayerId = 0
     
     private var _brawlInfo: BrawlInfo?
@@ -1503,6 +1519,7 @@ class Game: NSObject, PowerEventHandler {
         super.init()
         counterManager.initialize(game: self)
         _battlegroundsBoardState = BattlegroundsBoardState(game: self)
+        _battlegroundsDeityState = BattlegroundsDeityState(game: self)
 		player = Player(local: true, game: self)
         opponent = Player(local: false, game: self)
         secretsManager = SecretsManager(game: self, availableSecrets: RemoteArenaSettings(), relatedCardsManager: relatedCardsManager)
@@ -1537,7 +1554,11 @@ class Game: NSObject, PowerEventHandler {
                                            Settings.opponent_deck_top, Settings.opponent_deck_left,
                                            Settings.opponent_deck_height, Settings.overlay_opponent_scaling,
                                            Settings.opponent_opacity, Settings.overlay_center_opponent_stack,
-                                           Settings.deck_panel_order_opponent]
+                                           Settings.deck_panel_order_opponent,
+                                           // HDT hooks RelatedCardVisibilitySettings.Changed up to
+                                           // Core.UpdateOpponentCards; here the setting's own
+                                           // notification does the same job.
+                                           Settings.related_card_visibility_overrides]
 		
 		// events that should update all trackers
 		let allTrackerUpdateEvents = [Settings.rarity_colors, Events.reload_decks, Settings.window_locked, Settings.auto_position_trackers,
@@ -1686,6 +1707,7 @@ class Game: NSObject, PowerEventHandler {
         _unavailableRaces = nil
         _brawlInfo = nil
         _battlegroundsBoardState?.reset()
+        _battlegroundsDeityState?.reset()
         _battlegroundsHeroPickStatsParams = nil
         _battlegroundsHeroPickState = nil
         _mulliganGuideParams = nil
@@ -2242,6 +2264,7 @@ class Game: NSObject, PowerEventHandler {
             let finalPlacement = hero?[.player_leaderboard_place] ?? 0
             if battlegroundsDetails != nil {
                 battlegroundsDetails?.anomaly_dbf_id = gameEntity?[.bacon_global_anomaly_dbid]
+                battlegroundsDetails?.deity_dbf_id = BattlegroundsUtils.getBattlegroundsDeityDbfId(game: gameEntity)
                 battlegroundsDetails?.final_placement = finalPlacement
                 
                 battlegroundsDetails?.friendly_hero_raw_dbf_id = hero?.card.dbfId
@@ -2691,6 +2714,26 @@ class Game: NSObject, PowerEventHandler {
         handleIncidiusEndOfTurn(isOpponent: true, turn: turn)
     }
     
+    // "Battlecry: Reduce the Cost of a card in your hand by (5). This continues
+    // to the left and right with (1) less reduction." The chosen card is the
+    // CARD_TARGET, and "left and right" is distance in hand positions.
+    private func handleMotherCostReduction(_ entity: Entity) {
+        guard entity.cardId == CardIds.Collectible.Neutral.MOTHER, entity.has(tag: .card_target) else {
+            return
+        }
+        guard let target = entities[entity[.card_target]] else {
+            return
+        }
+
+        let targetZonePos = target.zonePosition
+        for handCard in opponent.hand where handCard.id != entity.id {
+            let reduction = 5 - abs(handCard.zonePosition - targetZonePos)
+            if reduction > 0 {
+                handCard.info.costReduction += reduction
+            }
+        }
+    }
+
     func handleThaurissanCostReduction() {
         let thaurissans = opponent.board.filter { x in
             (x.cardId == CardIds.Collectible.Neutral.EmperorThaurissan || x.cardId == CardIds.Collectible.Neutral.EmperorThaurissanWONDERS) && !x.has(tag: .silenced)
@@ -3230,7 +3273,7 @@ class Game: NSObject, PowerEventHandler {
                 return
             }
 
-            self._battlegroundsHeroPickStatsParams = BattlegroundsHeroPickStatsParams(hero_dbf_ids: newHeroDbfIds, minion_types: _battlegroundsHeroPickStatsParams.minion_types, anomaly_dbf_id: BattlegroundsUtils.getBattlegroundsAnomalyDbfId(game: gameEntity), game_language: "\(Settings.hearthstoneLanguage ?? .enUS)", battlegrounds_rating: battlegroundsRatingInfo?.rating.intValue, is_reroll: isReroll)
+            self._battlegroundsHeroPickStatsParams = BattlegroundsHeroPickStatsParams(hero_dbf_ids: newHeroDbfIds, minion_types: _battlegroundsHeroPickStatsParams.minion_types, anomaly_dbf_id: BattlegroundsUtils.getBattlegroundsAnomalyDbfId(game: gameEntity), deity_dbf_id: BattlegroundsUtils.getBattlegroundsDeityDbfId(game: gameEntity), game_language: "\(Settings.hearthstoneLanguage ?? .enUS)", battlegrounds_rating: battlegroundsRatingInfo?.rating.intValue, is_reroll: isReroll)
             return
         }
 
@@ -3242,7 +3285,7 @@ class Game: NSObject, PowerEventHandler {
             return
         }
 
-        _battlegroundsHeroPickStatsParams = BattlegroundsHeroPickStatsParams(hero_dbf_ids: heroDbfIds, minion_types: availableRaces.compactMap { x in Int(Race.allCases.firstIndex(of: x)!) }, anomaly_dbf_id: BattlegroundsUtils.getBattlegroundsAnomalyDbfId(game: gameEntity), game_language: "\(Settings.hearthstoneLanguage ?? .enUS)", battlegrounds_rating: battlegroundsRatingInfo?.rating.intValue, is_reroll: isReroll)
+        _battlegroundsHeroPickStatsParams = BattlegroundsHeroPickStatsParams(hero_dbf_ids: heroDbfIds, minion_types: availableRaces.compactMap { x in Int(Race.allCases.firstIndex(of: x)!) }, anomaly_dbf_id: BattlegroundsUtils.getBattlegroundsAnomalyDbfId(game: gameEntity), deity_dbf_id: BattlegroundsUtils.getBattlegroundsDeityDbfId(game: gameEntity), game_language: "\(Settings.hearthstoneLanguage ?? .enUS)", battlegrounds_rating: battlegroundsRatingInfo?.rating.intValue, is_reroll: isReroll)
     }
     
     private func getBattlegroundsHeroPickParams() -> BattlegroundsHeroPickStatsParams? {
@@ -3575,6 +3618,8 @@ class Game: NSObject, PowerEventHandler {
 
     func opponentPlay(entity: Entity, cardId: String?, from: Int, turn: Int) {
         opponent.play(entity: entity, turn: turn)
+        
+        handleMotherCostReduction(entity)
         
         predictFabled(entity)
 
@@ -4127,7 +4172,7 @@ class Game: NSObject, PowerEventHandler {
             return nil
         }
         
-        let parameters = BattlegroundsTrinketPickParams(hero_dbf_id: heroCard.dbfId, hero_power_dbf_ids: player.pastHeroPowers.compactMap({ x in Cards.by(cardId: x)?.dbfId }), minion_types: availableRaces.compactMap { x in Int(Race.allCases.firstIndex(of: x)!) }, anomaly_dbf_id: BattlegroundsUtils.getBattlegroundsAnomalyDbfId(game: gameEntity), turn: turnNumber(), source_dbf_id: sourceEntity.card.dbfId, offered_trinkets: offeredTrinkets, game_language: "\(Settings.hearthstoneLanguage ?? .enUS)", game_type: BnetGameType.getBnetGameType(gameType: currentGameType, format: currentFormat).rawValue, battlegrounds_rating: currentBattlegroundsRating)
+        let parameters = BattlegroundsTrinketPickParams(hero_dbf_id: heroCard.dbfId, hero_power_dbf_ids: player.pastHeroPowers.compactMap({ x in Cards.by(cardId: x)?.dbfId }), minion_types: availableRaces.compactMap { x in Int(Race.allCases.firstIndex(of: x)!) }, anomaly_dbf_id: BattlegroundsUtils.getBattlegroundsAnomalyDbfId(game: gameEntity), deity_dbf_id: BattlegroundsUtils.getBattlegroundsDeityDbfId(game: gameEntity), turn: turnNumber(), source_dbf_id: sourceEntity.card.dbfId, offered_trinkets: offeredTrinkets, game_language: "\(Settings.hearthstoneLanguage ?? .enUS)", game_type: BnetGameType.getBnetGameType(gameType: currentGameType, format: currentFormat).rawValue, battlegrounds_rating: currentBattlegroundsRating)
         return parameters
     }
     
@@ -4151,9 +4196,10 @@ class Game: NSObject, PowerEventHandler {
     // see setChoicesVisible below.
     private var pendingBgsCombatChoices: [String]?
 
-    func setChoicesVisible(_ choicesVisible: Bool, _ cardIds: [String]?) {
+    func setChoicesVisible(_ choicesVisible: Bool, _ isShopChoice: Bool, _ cardIds: [String]?) {
         windowManager.rootOverlay?.viewModel.battlegroundsTrinketPicking.choicesVisible = choicesVisible
         OverlayOpacityMask.trace("setChoicesVisible visible=\(choicesVisible)"
+                                 + " shop=\(isShopChoice)"
                                  + " cards=\(cardIds ?? [String]())"
                                  + " combat=\(isBattlegroundsCombatPhase)"
                                  + " bgs=\(isBattlegroundsMatch())")
@@ -4161,7 +4207,9 @@ class Game: NSObject, PowerEventHandler {
         guard isBattlegroundsMatch() else { return }
 
         let cardIdList = cardIds ?? [String]()
-        if !choicesVisible || cardIdList.isEmpty {
+        // Shop choices (the Timewarp tavern) look like the regular shop, not
+        // like floating discover cards, so nothing needs cutting away for them.
+        if !choicesVisible || isShopChoice || cardIdList.isEmpty {
             pendingBgsCombatChoices = nil
             onMainOverlay { $0.opacityMask.removeMaskedRegion("DiscoverCard") }
             return
@@ -4262,6 +4310,13 @@ class Game: NSObject, PowerEventHandler {
 
         let trinketPickWidth = 0.192
         let leftEdge = 0.122
+        // Confirmed by direct testing: this zonePosition is already
+        // 0-indexed, unlike the unrelated tags used for board trinkets
+        // (RegionDrawer's position-1) and hero picking (zonePosition-1) -
+        // those come off different game state entirely, so their indexing
+        // doesn't carry over here. A prior "fix" that subtracted 1 landed
+        // the trigger one slot to the left of the hovered trinket instead;
+        // this is the same formula HDT's own SetTrinketGuidesTrigger uses.
         let trinketX = leftEdge + Double(zonePosition) * trinketPickWidth
 
         let trigger = BattlegroundsDiscoveryGuideTrigger(
@@ -4332,7 +4387,7 @@ class Game: NSObject, PowerEventHandler {
         
         let boardCards = args.boardCards
         let userHasTier7 = HSReplayAPI.accountData?.is_tier7 ?? false // TODO: trial active
-        let currentPeriod = RemoteConfig.metaPeriods?.sorted(by: { $0.period_start > $1.period_start }).first
+        let currentPeriod = RemoteConfig.battlegroundsLiveMetaPeriod
         let hasTimewarpMechanic = currentPeriod?.mechanics.firstIndex(of: "timewarp") != nil
         
         if args.isActive && boardCards.count > 0 && userHasTier7 && hasTimewarpMechanic {
@@ -5352,6 +5407,11 @@ class Game: NSObject, PowerEventHandler {
         updateOpponentResourcesWidget()
     }
 
+    func handlePlayerMaxGoldChange(_ value: Int) {
+        player.maxGold = value
+        updatePlayerResourcesWidget()
+    }
+
     func handlePlayerCorpsesLeftChange(_ value: Int) {
         player.corpsesLeft = value
         updatePlayerResourcesWidget()
@@ -5368,7 +5428,10 @@ class Game: NSObject, PowerEventHandler {
 
     func updatePlayerResourcesWidget() {
         let shouldShowCorpsesLeft = Settings.showPlayerCorpsesCounter
-        updatePlayerResourcesWidget(player.maxHealth, player.maxMana, player.maxHandSize, shouldShowCorpsesLeft ? player.corpsesLeft : nil)
+        let shouldShowMaxGold = player.shouldShowMaxGold
+        updatePlayerResourcesWidget(player.maxHealth, player.maxMana, player.maxHandSize,
+                                    shouldShowCorpsesLeft ? player.corpsesLeft : nil,
+                                    shouldShowMaxGold ? player.maxGold : nil)
     }
 
     func updateOpponentResourcesWidget() {
@@ -5384,9 +5447,10 @@ class Game: NSObject, PowerEventHandler {
         }
     }
 
-    func updatePlayerResourcesWidget(_ maxHealth: Int, _ maxMana: Int, _ maxHandSize: Int, _ corpsesLeft: Int? = nil) {
+    func updatePlayerResourcesWidget(_ maxHealth: Int, _ maxMana: Int, _ maxHandSize: Int,
+                                     _ corpsesLeft: Int? = nil, _ maxGold: Int? = nil) {
         DispatchQueue.main.async {
-            self.windowManager.rootOverlay?.viewModel.playerResources.updatePlayerResourcesWidget(maxHealth, maxMana, maxHandSize, corpsesLeft)
+            self.windowManager.rootOverlay?.viewModel.playerResources.updatePlayerResourcesWidget(maxHealth, maxMana, maxHandSize, corpsesLeft, maxGold)
         }
     }
     
@@ -5400,12 +5464,16 @@ class Game: NSObject, PowerEventHandler {
     // replaces applied it on top of the widget's own visibility flag.
     func updatePlayerResorucesWidgetVisibility() {
         guard let viewModel = windowManager.rootOverlay?.viewModel else { return }
-        if isInMenu || !isMulliganDone() || isBattlegroundsMatch() || !shouldShowTracker {
+        if isInMenu || !isMulliganDone() || !shouldShowTracker {
             viewModel.playerResources.isShown = false
             viewModel.opponentResources.isShown = false
         } else {
-            viewModel.playerResources.isShown = Settings.showPlayerMaxResources
-            viewModel.opponentResources.isShown = Settings.showOpponentMaxResources
+            // Battlegrounds has a setting of its own, because the only thing
+            // the widget shows there is the max gold counter.
+            viewModel.playerResources.isShown = isBattlegroundsMatch()
+                ? Settings.showBattlegroundsMaxResources
+                : Settings.showPlayerMaxResources
+            viewModel.opponentResources.isShown = Settings.showOpponentMaxResources && !isBattlegroundsMatch()
         }
     }
 }

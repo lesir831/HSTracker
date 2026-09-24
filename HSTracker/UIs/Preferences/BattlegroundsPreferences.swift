@@ -24,12 +24,16 @@ class BattlegroundsPreferences: PreferencePaneController, PreferencePane {
     @IBOutlet var showBobsBuddyDuringCombat: NSButton!
     @IBOutlet var showBobsBuddyDuringShopping: NSButton!
     @IBOutlet var showTurnCounter: NSButton!
+    // HDT's CheckboxShowBattlegroundsMaxResourcesWidget.
+    @IBOutlet var showMaxResources: NSButton!
     @IBOutlet var showAverageDamage: NSButton!
     @IBOutlet var showOpponentWarband: NSButton!
     @IBOutlet var showTiers: NSButton!
     @IBOutlet var showBattlegroundsGuides: NSButton!
     // HDT's CheckboxShowMinionBrowserBetweenGames.
     @IBOutlet var showBattlegroundsGuidesPreLobby: NSButton!
+    // HDT's CheckboxShowBattlegroundsMetaSnapshot.
+    @IBOutlet var showBattlegroundsMetaSnapshot: NSButton!
     // HDT's CheckboxShowBattlegroundsTavernMarkers and the two it gates
     // (OverlayBattlegrounds.xaml).
     @IBOutlet var showTavernPinning: NSButton!
@@ -67,11 +71,13 @@ class BattlegroundsPreferences: PreferencePaneController, PreferencePane {
         showBobsBuddyDuringCombat.state = Settings.showBobsBuddyDuringCombat ? .on : .off
         showBobsBuddyDuringShopping.state = Settings.showBobsBuddyDuringShopping ? .on : .off
         showTurnCounter.state = Settings.showTurnCounter ? .on : .off
+        showMaxResources.state = Settings.showBattlegroundsMaxResources ? .on : .off
         showAverageDamage.state = Settings.showAverageDamage ? .on : .off
         showOpponentWarband.state = Settings.showOpponentWarband ? .on : .off
         showTiers.state = Settings.showBattlegroundsBrowser ? .on : .off
         showBattlegroundsGuides.state = Settings.showBattlegroundsGuides ? .on : .off
         showBattlegroundsGuidesPreLobby.state = Settings.showBattlegroundsGuidesPreLobby ? .on : .off
+        showBattlegroundsMetaSnapshot.state = Settings.showBattlegroundsMetaSnapshot ? .on : .off
         showTavernPinning.state = Settings.showBattlegroundsTavernMarkers ? .on : .off
         autoEnableTavernPinningRecommended.state = Settings.autoEnableTavernMarkersRecommended ? .on : .off
         // Checked only while *neither* half has been dismissed, matching HDT's
@@ -108,18 +114,27 @@ class BattlegroundsPreferences: PreferencePaneController, PreferencePane {
             Settings.showBobsBuddyDuringShopping = showBobsBuddyDuringShopping.state == .on
         } else if sender == showTurnCounter {
             Settings.showTurnCounter = showTurnCounter.state == .on
+        } else if sender == showMaxResources {
+            Settings.showBattlegroundsMaxResources = sender.state == .on
+            // HDT flips the widget's Visibility straight from the checkbox
+            // rather than waiting for the next overlay tick.
+            game.updatePlayerResorucesWidgetVisibility()
         } else if sender == showAverageDamage {
             Settings.showAverageDamage = showAverageDamage.state == .on
         } else if sender == showOpponentWarband {
             Settings.showOpponentWarband = showOpponentWarband.state == .on
         } else if sender == showTiers {
             Settings.showBattlegroundsBrowser = showTiers.state == .on
+            updateEnablement()
         } else if sender == showBattlegroundsGuides {
             Settings.showBattlegroundsGuides = showBattlegroundsGuides.state == .on
             updateEnablement()
         } else if sender == showBattlegroundsGuidesPreLobby {
             Settings.showBattlegroundsGuidesPreLobby = showBattlegroundsGuidesPreLobby.state == .on
+            updateEnablement()
             game.updateBattlegroundsGuidesPreLobbyVisibility()
+        } else if sender == showBattlegroundsMetaSnapshot {
+            Settings.showBattlegroundsMetaSnapshot = showBattlegroundsMetaSnapshot.state == .on
         } else if sender == showTavernPinning {
             Settings.showBattlegroundsTavernMarkers = sender.state == .on
             updateEnablement()
@@ -258,6 +273,11 @@ class BattlegroundsPreferences: PreferencePaneController, PreferencePane {
         alwaysShowTavernTier7.isEnabled = showTiers.state == .on
         showBattlegroundsGuides.isEnabled = showTiers.state == .on
         showBattlegroundsGuidesPreLobby.isEnabled = showTiers.state == .on
+        // The meta snapshot only ever shows in the guides panel of the pre-lobby
+        // browser, so all three of its hosts have to be on for it to mean anything.
+        showBattlegroundsMetaSnapshot.isEnabled = showTiers.state == .on
+            && showBattlegroundsGuides.state == .on
+            && showBattlegroundsGuidesPreLobby.state == .on
 
         // IsEnabled="{Binding IsChecked, ElementName=CheckboxShowBattlegroundsTavernMarkers}"
         // on both of the pinning sub-options.

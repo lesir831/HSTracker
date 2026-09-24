@@ -903,6 +903,8 @@ extension CardIds.Collectible {
         static let LinaShopManager = "TOY_531"
         static let SpitefulSummoner = "LOOT_539"
         static let Steeldancer = "SCH_522"
+        static let MOTHER = "BE_036"
+        static let ArfusCorePlaceholder = "CORE_ICC_854"
     }
 }
 
@@ -1047,6 +1049,21 @@ extension CardIds.NonCollectible {
         static let OffensiveSacrifice = "BG36_MidGameEffect_000te2"
         static let DefensiveSacrifice = "BG36_MidGameEffect_000t2e2"
         static let Invulnerability = "BG36_MidGameEffect_000t60e"
+        // The Deity Sigil: the objective that carries the Deity a player will summon.
+        static let SecretDeityDnt = "BG_OldGod"
+        // The Deities a sigil can awaken as, and the generic Aberration art the counter
+        // falls back to until the sigil says which one it holds.
+        static let ATaleofKings_KingOfAberrationsTavernBrawl = "TB_BaconShop_HP_041l"
+        static let BrainRotter = "BG36_099"
+        static let CutthroatKthir = "BG36_106"
+        static let ViciousMindslasher = "BG36_108"
+        static let TheShadowOfDoubt = "BG36_109"
+        static let Joyous = "BG36_110"
+        static let ShaOfFear = "BG36_111"
+        static let DriftingSacrifice = "BG36_113"
+        static let FacelessConverter = "BG36_318"
+        static let EnergizingChamber = "BG36_371"
+        static let HarbingerAphlass = "BGFYM_005"
         static let ColdFeet_ColdFeetEnchantment1 = "JAM_006e"
         static let DiscipleofEonar_SymbioticEnchantment = "TTN_503e"
         static let PopularPixie_GladesGuidanceEnchantment = "JAM_026e"
@@ -1322,6 +1339,8 @@ extension CardIds.NonCollectible {
         static let AccordoTron_AccordOTronEnchantment = "BG26_147e"
         static let BilgewaterBreakout_LockboxToken = "BG36_520t"
         static let WaxLance = "BG36_MagicItem_309"
+        // The trinket that turns a Deity golden as it awakens.
+        static let MaskOfAncientOnes = "BG36_MagicItem_602"
         static let GeniusOfMimironToken2 = "TTN_060t10t"
         static let MechagnomeGuide_MechagnomeGuideToken = "TTN_076t"
         static let OrgozoatheTender_AzsharasHatcheryToken = "BG23_015t"
