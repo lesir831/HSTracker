@@ -90,7 +90,6 @@ struct TagChangeActions {
                 self.cantPlayChange(eventHandler: eventHandler, id: id, value: value, previous: prevValue)
             case .health:
                 self.healthChange(eventHandler: eventHandler, id: id, value: value, previous: prevValue)
-                self.drBoomsMonsterRebornHealth(eventHandler: eventHandler, id: id, value: value)
             case .atk:
                 self.opponentMalorneAtkChange(eventHandler: eventHandler, id: id, value: value, previous: prevValue)
             case .maxresources:
@@ -241,20 +240,6 @@ struct TagChangeActions {
         if value != 1 {
             return
         }
-    }
-    
-    private func drBoomsMonsterRebornHealth(eventHandler: PowerEventHandler, id: Int, value: Int) {
-        if !BobsBuddyInvoker.currentCombatHasDrBoomsMonster {
-            return
-        }
-        guard let entity = eventHandler.entities[id] else {
-            return
-        }
-        if entity.cardId != CardIds.NonCollectible.Neutral.DrBoomsMonster
-            && entity.cardId != CardIds.NonCollectible.Neutral.DrBoomsMonster_DrBoomsMonster1 {
-            return
-        }
-        BobsBuddyInvoker.instance(gameId: eventHandler.gameId, turn: eventHandler.turnNumber())?.updateDrBoomsMonsterReborn(entity[.creator], value, entity.isControlled(by: eventHandler.player.id))
     }
     
     private func opponentMalorneAtkChange(eventHandler: PowerEventHandler, id: Int, value: Int, previous: Int) {
@@ -1021,6 +1006,13 @@ struct TagChangeActions {
         }
     }
 
+    private func updateBoardOrder(eventHandler: PowerEventHandler, entity: Entity, value: Int, prevValue: Int) {
+        if value == Zone.play.rawValue && prevValue != Zone.play.rawValue {
+            eventHandler.boardOrderCounter += 1
+            entity.info.boardOrder = eventHandler.boardOrderCounter
+        }
+    }
+
     private func zoneChange(eventHandler: PowerEventHandler, id: Int, value: Int, prevValue: Int) {
         guard id > 3 else { return }
         guard let entity = eventHandler.entities[id] else { return }
@@ -1032,6 +1024,7 @@ struct TagChangeActions {
                 entity.info.originalZone = Zone(rawValue: value)
             }
         }
+        updateBoardOrder(eventHandler: eventHandler, entity: entity, value: value, prevValue: prevValue)
         
         let controller = entity[.controller]
         guard let zoneValue = Zone(rawValue: prevValue) else {
