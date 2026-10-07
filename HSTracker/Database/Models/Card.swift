@@ -64,6 +64,7 @@ final class Card {
     var raceTags: [Int] = []
     var type: CardType = .invalid
     var mechanics: [String] = []
+    var accountQuestKeywords = Set<String>()
     var isStandard = false
     var multiClassGroup: MultiClassGroup = .invalid
     var multipleClasses = 0
@@ -469,6 +470,7 @@ extension Card: NSCopying {
         copy.race = self.race
         copy.type = self.type
         copy.mechanics = self.mechanics
+        copy.accountQuestKeywords = self.accountQuestKeywords
         copy.isStandard = self.isStandard
         copy.count = self.count
         copy.hasChanged = self.hasChanged

@@ -495,6 +495,8 @@ struct RootOverlayView: View {
                                         cardListTriggerFrame: $viewModel.arenaCardListTriggerFrame,
                                         tooltipRegions: $viewModel.arenaTooltipRegions)
                         .padding(.leading, fourThreeInset)
+                    HearthArenaPickView(viewModel: viewModel.hearthArenaPick, arenasmith: viewModel.arenaPickHelper)
+                        .padding(.leading, fourThreeInset)
                 }
                 .frame(width: canvasWidth, height: 1080)
 

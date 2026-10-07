@@ -70,6 +70,7 @@ class SceneHandler {
                 // _arenaPreLobbyBehavior's HideCallbacks.
                 let overlay = game.windowManager.rootOverlay?.viewModel
                 overlay?.arenaPickHelper.reset()
+                overlay?.hearthArenaPick.reset()
                 overlay?.arenaPreDraft.reset()
             }
         } else if from == .gameplay {

@@ -91,8 +91,9 @@ struct AccountQuestOverlayRow: Identifiable, Equatable {
             let quota = max(0, definition?.quota ?? 0)
             // Event bonuses/co-op credit remain server-authoritative, even if
             // a future event reuses a known ordinary quest's ID and quota.
-            let progress = definition?.isEvent == true ? nil : estimate.progress(for: quest, quota: quota)
-            let parts = displayText(definition?.text ?? "", separateNote: definition?.isEvent == true)
+            let progress = definition?.isEvent == true ? nil : estimate.progress(for: quest, quota: quota,
+                                                                                rewardTrack: definition?.rewardTrackType)
+            let parts = displayText(definition?.text ?? "", separateNote: true)
             let description = parts.objective
             let name = plainText(definition?.name ?? "")
             return Self(id: quest.id,

@@ -19,6 +19,7 @@ class PowerGameStateParser: LogEventParser {
     
     final let BlockStartRegex = Regex(".*BLOCK_START.*BlockType=(\\w+).*id=(\\d*).*(cardId=(\\w*)).*player=(\\d*).*EffectCardId=(.*)\\sEffectIndex=.*Target=(.+).*SubOption=([^\\s]*)(?:\\sTriggerKeyword=\\w+)?")
     final let CardIdRegex = Regex("cardId=(\\w+)")
+    final let TriggerKeywordRegex = Regex("TriggerKeyword=(\\w+)")
     final let CreationRegex = Regex("FULL_ENTITY - Updating.*id=(\\d+).*zone=(\\w+).*CardID=(\\w*)")
     final let CreationTagRegex = Regex("tag=(\\w+) value=(\\w+)")
     final let GameEntityRegex = Regex("GameEntity EntityID=(\\d+)")
@@ -69,7 +70,7 @@ class PowerGameStateParser: LogEventParser {
         maxBlockId += 1
         let blockId = maxBlockId
         currentBlock = currentBlock?.createChild(blockId: blockId, type: type, cardId: cardId, target: target, trigger: trigger) ?? Block(parent: nil, id: blockId, type: type, cardId: cardId, target: target, trigger: trigger)
-        AppDelegate.instance().coreManager.game.secretsManager?.onNewBlock()
+        (eventHandler as? Game)?.secretsManager?.onNewBlock()
     }
 
     func blockEnd() {
@@ -744,12 +745,18 @@ class PowerGameStateParser: LogEventParser {
                     correspondPlayer = v
                 }
             }
-            var triggerKeyword: String?
-            if matches.count > 5 {
-                triggerKeyword = matches[5].value
-            }
+            let triggerKeyword = TriggerKeywordRegex.matches(logLine.line).first?.value
             
             blockStart(type: blockType, cardId: cardId, target: target, trigger: triggerKeyword)
+
+            // PLAY/ATTACK sources are also needed for quest ownership and
+            // retaliation damage. Previously only POWER/TRIGGER stored them.
+            if matches.count > 1, let source = Int(matches[1].value), let block = currentBlock {
+                block.sourceEntityId = source
+                if let game = eventHandler as? Game {
+                    game.updateAccountQuestBlock(block)
+                }
+            }
 
             if matches.count > 0 && blockType == "PLAY" {
                 eventHandler.lastPlayBlockTime = logLine.time

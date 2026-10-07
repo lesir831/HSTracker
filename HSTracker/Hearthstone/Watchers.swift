@@ -79,6 +79,9 @@ class Watchers {
     }
     
     static func stop() {
+        DispatchQueue.main.async {
+            AppDelegate.instance().coreManager?.game.windowManager.rootOverlay?.viewModel.hearthArenaPick.reset()
+        }
         arenaWatcher.stop()
         arenaStateWatcher.stop()
         baconWatcher.stop()
@@ -198,6 +201,8 @@ class Watchers {
             DispatchQueue.main.async {
                 AppDelegate.instance().coreManager.game.windowManager
                     .rootOverlay?.viewModel.arenaPickHelper.reset()
+                AppDelegate.instance().coreManager.game.windowManager
+                    .rootOverlay?.viewModel.hearthArenaPick.reset()
             }
         }
     }

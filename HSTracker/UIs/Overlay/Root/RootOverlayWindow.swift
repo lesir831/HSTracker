@@ -33,6 +33,12 @@ class RootOverlayWindow: OverWindowController {
 
     override func windowDidLoad() {
         super.windowDidLoad()
+        if let panel = window as? NSPanel {
+            // Clicking a quest button must leave Hearthstone active; otherwise
+            // the game's background visibility rule hides the entire canvas.
+            panel.becomesKeyOnlyIfNeeded = true
+            panel.hidesOnDeactivate = false
+        }
         hostingView = NSHostingView(rootView: RootOverlayView(viewModel: viewModel))
         window?.contentView = hostingView
         window?.isOpaque = false
@@ -96,7 +102,6 @@ class RootOverlayWindow: OverWindowController {
 
         if viewModel.opacityMask.hides(viewPoint, canvasSize: hostingView.bounds.size) {
             viewModel.hoveredRegionIds = []
-            viewModel.accountQuests.setHovered(false)
             updateMercenariesTasksHover([])
             dismissHoverTooltips()
             setIgnoresMouseEvents(true)
@@ -162,7 +167,6 @@ class RootOverlayWindow: OverWindowController {
         }
 
         updateMercenariesTasksHover(hovered)
-        viewModel.accountQuests.setHovered(hovered.contains(HoverRegionID.accountQuests))
 
         let hovering = hovered.contains(HoverRegionID.bgsTopBarMask)
         let minions = viewModel.battlegroundsMinionsGuide

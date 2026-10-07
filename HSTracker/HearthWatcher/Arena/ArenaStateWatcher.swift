@@ -45,6 +45,12 @@ struct ArenaDraftChoice: Equatable {
     let cardId: String
     let packageCardIds: [String]
 
+    init(index: Int, cardId: String, packageCardIds: [String] = []) {
+        self.index = index
+        self.cardId = cardId
+        self.packageCardIds = packageCardIds
+    }
+
     init(mirror: MirrorDraftChoice) {
         index = mirror.actor.index.intValue
         cardId = mirror.actor.cardId

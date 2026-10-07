@@ -1,0 +1,2429 @@
+{
+  "source": "https://static.firestoneapp.com/data/quests/quests-data_enUS.gz.json",
+  "collectedAt": "2026-09-23",
+  "sourceSHA256": "ba0ea19e78d3a09591aac0c0e3919e6bbc9f6b1764dce7de3f5f390a7218f497",
+  "note": "Definition catalog includes historical entries; not a current assignment or active quest pool.",
+  "quests": [
+    {
+      "id": 4,
+      "description": "Objective for Daily 1.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 5,
+      "description": "Objective for Daily 2.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 6,
+      "description": "Objective for Daily 3.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 7,
+      "description": "Objective for Daily 4.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 8,
+      "description": "Objective for Daily 5.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 9,
+      "description": "Objective for Daily 6.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 10,
+      "description": "Objective for Daily 7.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 11,
+      "description": "Objective of Weekly 1.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 12,
+      "description": "Objective of Weekly 2.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 13,
+      "description": "Objective of Weekly 3.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 14,
+      "description": "Objective of Weekly 4.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 15,
+      "description": "Objective of Weekly 5.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 16,
+      "description": "Objective of Weekly 6.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 17,
+      "description": "Objective of Weekly 7.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 18,
+      "description": "Objective of Weekly 8.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 20,
+      "description": "Play $q games as Druid, Mage, or Paladin.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 21,
+      "description": "Play $q games as Druid, Rogue, or Shaman.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 22,
+      "description": "Play $q Tavern Brawls.",
+      "name": "",
+      "quota": 2,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 23,
+      "description": "Play $q Murlocs.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 24,
+      "description": "Play $q Battlecry cards.",
+      "name": "",
+      "quota": 50,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 25,
+      "description": "Play $q games.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 900
+    },
+    {
+      "id": 26,
+      "description": "Deal $q damage to enemy heroes.",
+      "name": "",
+      "quota": 65,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 900
+    },
+    {
+      "id": 27,
+      "description": "Win a game with 4 different classes.",
+      "name": "",
+      "quota": 4,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 28,
+      "description": "Use your Hero Power $q times.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 2250
+    },
+    {
+      "id": 29,
+      "description": "Watch a friend win a game in Spectator Mode.",
+      "name": "",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 30,
+      "description": "Challenge a friend. You both earn a reward!",
+      "name": "",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 34,
+      "description": "Play $q games as Rogue, Warlock, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 35,
+      "description": "Play $q games as Rogue, Shaman, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 36,
+      "description": "Play $q games as Shaman, Warlock, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 37,
+      "description": "Play $q games as Demon Hunter, Druid, or Priest.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 38,
+      "description": "Play $q games as Priest, Rogue, or Warlock.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 39,
+      "description": "Play $q games as Demon Hunter, Hunter, or Priest.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 40,
+      "description": "Play $q games as Demon Hunter, Mage, or Rogue.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 41,
+      "description": "Play $q games as Demon Hunter, Mage, or Shaman.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 42,
+      "description": "Play $q games as Demon Hunter, Mage, or Warlock.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 43,
+      "description": "Play $q games as Demon Hunter, Paladin, or Shaman.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 44,
+      "description": "Play $q games as Demon Hunter, Paladin, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 45,
+      "description": "Play $q games as Demon Hunter, Priest, or Rogue.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 46,
+      "description": "Play $q games as Demon Hunter, Priest, or Shaman.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 47,
+      "description": "Play $q games as Druid, Hunter, or Mage.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 48,
+      "description": "Play $q games as Druid, Hunter, or Paladin.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 49,
+      "description": "Play $q games as Druid, Hunter, or Priest.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 50,
+      "description": "Play $q games as Druid, Hunter, or Rogue.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 51,
+      "description": "Play $q games as Druid, Mage, or Shaman.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 52,
+      "description": "Play $q games as Druid, Mage, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 53,
+      "description": "Play $q games as Druid, Warlock, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 54,
+      "description": "Play $q games as Hunter, Mage, or Paladin.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 55,
+      "description": "Play $q games as Hunter, Mage, or Warlock.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 56,
+      "description": "Play $q games as Hunter, Paladin, or Priest.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 57,
+      "description": "Play $q games as Hunter, Shaman, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 58,
+      "description": "Play $q games as Mage, Paladin, or Priest.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 59,
+      "description": "Play $q games as Mage, Priest, or Rogue.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 60,
+      "description": "Play $q games as Mage, Rogue, or Shaman.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 61,
+      "description": "Play $q games as Mage, Warlock, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 62,
+      "description": "Play $q games as Paladin, Priest, or Rogue.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 63,
+      "description": "Play $q games as Paladin, Priest, or Shaman.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 64,
+      "description": "Play $q games as Paladin, Priest, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 65,
+      "description": "Play $q games as Paladin, Warlock, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 66,
+      "description": "Play $q games as Priest, Shaman, or Warlock.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 67,
+      "description": "Play $q games as Rogue, Shaman, or Warlock.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 68,
+      "description": "Play $q Battlecry cards.",
+      "name": "",
+      "quota": 20,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 69,
+      "description": "Play $q Beasts.",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 70,
+      "description": "Play $q Dragons.",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 71,
+      "description": "Play $q Battlecry cards.",
+      "name": "",
+      "quota": 75,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 2250
+    },
+    {
+      "id": 72,
+      "description": "Trigger your Deathrattle effects $q times.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 73,
+      "description": "Have your Taunt minions take damage $q times.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 74,
+      "description": "Play $q weapons.",
+      "name": "",
+      "quota": 4,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 75,
+      "description": "Play $q cards that cost 7 or more.",
+      "name": "",
+      "quota": 6,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 76,
+      "description": "Play $q cards that cost 3 or less.",
+      "name": "",
+      "quota": 25,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 77,
+      "description": "Play $q odd-cost cards.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 78,
+      "description": "Play $q even-cost cards.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 79,
+      "description": "Play $q minions that cost 1.",
+      "name": "",
+      "quota": 8,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 80,
+      "description": "Play $q card that costs 10.",
+      "name": "",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 81,
+      "description": "Play $q cards that cost 3 or less.",
+      "name": "",
+      "quota": 50,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 82,
+      "description": "Play $q cards.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 900
+    },
+    {
+      "id": 83,
+      "description": "Play $q minions.",
+      "name": "",
+      "quota": 25,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 900
+    },
+    {
+      "id": 84,
+      "description": "Play $q spells.",
+      "name": "",
+      "quota": 25,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 900
+    },
+    {
+      "id": 85,
+      "description": "Use your Hero Power $q times.",
+      "name": "",
+      "quota": 5,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 900
+    },
+    {
+      "id": 86,
+      "description": "Win $q games.",
+      "name": "",
+      "quota": 5,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 87,
+      "description": "Win $q games.",
+      "name": "",
+      "quota": 2,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 900
+    },
+    {
+      "id": 88,
+      "description": "Play $q Corrupt cards.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 89,
+      "description": "Deal $q damage to enemy heroes.",
+      "name": "",
+      "quota": 400,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 2250
+    },
+    {
+      "id": 90,
+      "description": "Draw $q cards.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 900
+    },
+    {
+      "id": 91,
+      "description": "Take $q turns.",
+      "name": "",
+      "quota": 20,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 900
+    },
+    {
+      "id": 92,
+      "description": "Destroy $q minions.",
+      "name": "",
+      "quota": 25,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 900
+    },
+    {
+      "id": 93,
+      "description": "Spend $q mana.",
+      "name": "",
+      "quota": 650,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 2250
+    },
+    {
+      "id": 94,
+      "description": "Deal $q damage to enemy minions in Battlegrounds.",
+      "name": "",
+      "quota": 1500,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 95,
+      "description": "Play an Old God Legendary from the Darkmoon Faire $q times.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 96,
+      "description": "Finish in Top 4 in Battlegrounds.",
+      "name": "",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 97,
+      "description": "Play $q games of Tavern Brawl, Arena, or Battlegrounds.",
+      "name": "",
+      "quota": 5,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 2250
+    },
+    {
+      "id": 98,
+      "description": "Play $q games of Hearthstone's Ranked Mode.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 3000
+    },
+    {
+      "id": 109,
+      "description": "Finish an Arena run with 4 or more wins.",
+      "name": "",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 114,
+      "description": "Challenge a friend. You both earn a reward!",
+      "name": "",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 131,
+      "description": "Play a Legendary card from Forged in the Barrens, $q times.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 132,
+      "description": "Play $q Frenzy minions.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 133,
+      "description": "Deal $q Arcane Damage",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 134,
+      "description": "Deal $q Fire Damage",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 135,
+      "description": "Deal $q Frost Damage.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 136,
+      "description": "Deal $q Nature Damage.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 137,
+      "description": "Deal $q Holy Damage.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 138,
+      "description": "Deal 100 Shadow Damage.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 139,
+      "description": "Deal $q Fel Damage.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 151,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 152,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 153,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 154,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 155,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 156,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 157,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 158,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 159,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 160,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 161,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 162,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 311,
+      "description": "Play or Trade $q Tradeable cards.",
+      "name": "",
+      "quota": 15,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 312,
+      "description": "Complete $q United in Stormwind Questlines.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 365,
+      "description": "Play $q Dragons and/or Naga.",
+      "name": "",
+      "quota": 50,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 366,
+      "description": "Play $q Beasts and/or Elementals.",
+      "name": "",
+      "quota": 50,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 367,
+      "description": "Play $q Dragons and/or Naga and/or Mechs.",
+      "name": "",
+      "quota": 50,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 368,
+      "description": "Play $q Golden Cards",
+      "name": "",
+      "quota": 20,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 369,
+      "description": "Buy $q Minions.",
+      "name": "",
+      "quota": 250,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 370,
+      "description": "Play $q games of Duels.",
+      "name": "An Unwelcome Guest",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 380,
+      "description": "Deal $q damage to enemy heroes.",
+      "name": "",
+      "quota": 150,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 381,
+      "description": "Win $q Combats.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 382,
+      "description": "Destroy $q minions.",
+      "name": "",
+      "quota": 500,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 383,
+      "description": "Buy $q cards.",
+      "name": "",
+      "quota": 100,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 385,
+      "description": "Win $q games.",
+      "name": "",
+      "quota": 4,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 386,
+      "description": "Play $q Beasts or Naga.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 387,
+      "description": "Play $q Demons or Elementals.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 388,
+      "description": "Play $q Elementals or Beasts.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 389,
+      "description": "Play $q Mechs or Pirates.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 390,
+      "description": "Play $q Murlocs or Demons.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 391,
+      "description": "Play $q Naga or Dragons.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 392,
+      "description": "Play $q Pirates or Quilboar.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 393,
+      "description": "Play $q Murlocs or Quilboar.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 394,
+      "description": "Trigger your Deathrattle effects $q times.",
+      "name": "",
+      "quota": 60,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 395,
+      "description": "Prevent damage with Divine Shield $q times.",
+      "name": "",
+      "quota": 40,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 396,
+      "description": "Play $q Battlecry minions.",
+      "name": "",
+      "quota": 40,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 397,
+      "description": "Play $q Golden minions.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 398,
+      "description": "Play $q Tier 6 minions.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 399,
+      "description": "Upgrade your Tavern $q times.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 403,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 404,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 405,
+      "description": "Activate a Location $q times. ",
+      "name": "",
+      "quota": 6,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 406,
+      "description": "Play $q Infuse cards.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 412,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 413,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 414,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 415,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 416,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 417,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 432,
+      "description": "Play $q Manathirst cards.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 433,
+      "description": "Play $q Undead.",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 434,
+      "description": "Play $q games as Death Knight, Demon Hunter, or Druid.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 435,
+      "description": "Play $q games as Death Knight, Hunter, or Mage.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 436,
+      "description": "Play $q games as Death Knight, Paladin, or Priest.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 437,
+      "description": "Play $q games as Death Knight, Rogue, or Shaman.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 438,
+      "description": "Play $q games as Death Knight, Warlock, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 439,
+      "description": "Play $q games as Death Knight, Demon Hunter, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 440,
+      "description": "Play $q games as Death Knight, Druid, or Warlock.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 441,
+      "description": "Play $q games as Death Knight, Hunter, or Shaman.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 442,
+      "description": "Play $q games as Death Knight, Mage, or Rogue.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 443,
+      "description": "Play $q games as Death Knight, Demon Hunter, or Paladin.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 444,
+      "description": "Play $q games as Death Knight, Priest, or Warlock.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 445,
+      "description": "Play $q games as Death Knight, Hunter, or Warrior.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 487,
+      "description": "Cast $q Arcane or Fel spells.",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 488,
+      "description": "Cast $q Arcane or Holy spells.",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 489,
+      "description": "Cast $q Frost or Shadow spells.",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 490,
+      "description": "Cast $q Fire or Shadow spells.",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 491,
+      "description": "Cast $q Fel or Nature spells.",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 492,
+      "description": "Cast $q Fire or Nature spells.",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 493,
+      "description": "Cast $q Frost or Holy spells.",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 494,
+      "description": "Play $q Beasts or Undead.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 495,
+      "description": "Play $q Murlocs or Undead.",
+      "name": "",
+      "quota": 30,
+      "rewardListId": 0,
+      "rewardTrackType": 2,
+      "rewardTrackXp": 60
+    },
+    {
+      "id": 506,
+      "description": "Play $q weapons from Festival of Legends.",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 507,
+      "description": "Play $q Finale cards.",
+      "name": "",
+      "quota": 8,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 508,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 509,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 510,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 511,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 512,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 513,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 514,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 515,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 516,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 517,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 527,
+      "description": "Forge $q cards.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 528,
+      "description": "Play $q Titans.",
+      "name": "",
+      "quota": 4,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 653,
+      "description": "Play a game.",
+      "name": "Warm-Up",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 25
+    },
+    {
+      "id": 654,
+      "description": "Play a game of any mode.",
+      "name": "Arena Fighter",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 250
+    },
+    {
+      "id": 655,
+      "description": "Play a game of any mode.",
+      "name": "Tavern Brawler ",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 100
+    },
+    {
+      "id": 656,
+      "description": "Deplete your mana for 5 turns in a row.",
+      "name": "On Curve",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 50
+    },
+    {
+      "id": 657,
+      "description": "Use all the cards in your hand at any point, and win.",
+      "name": "All-In",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 50
+    },
+    {
+      "id": 658,
+      "description": "Finish off an opponent while they control a minion. ",
+      "name": "Knock-out Punch",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 50
+    },
+    {
+      "id": 659,
+      "description": "Draw 3 extra cards during a match. ",
+      "name": "Card Advantage ",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 50
+    },
+    {
+      "id": 660,
+      "description": "Use a spell to remove 3 or more minions.",
+      "name": "Board Control",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 50
+    },
+    {
+      "id": 661,
+      "description": "Attack an opponent's minion with your minion and have it survive. ",
+      "name": "Trading",
+      "quota": 1,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 50
+    },
+    {
+      "id": 662,
+      "description": "Buy a pack with Gold.",
+      "name": "Gold Rush",
+      "quota": 1,
+      "rewardListId": 1684,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 25
+    },
+    {
+      "id": 663,
+      "description": "Open 5 card packs.",
+      "name": "Pack  City",
+      "quota": 5,
+      "rewardListId": 1684,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 50
+    },
+    {
+      "id": 664,
+      "description": "Disenchant a card in your collection. ",
+      "name": "Dusting",
+      "quota": 1,
+      "rewardListId": 1685,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 50
+    },
+    {
+      "id": 665,
+      "description": "Craft a card to add to your collection.",
+      "name": "Crafting",
+      "quota": 1,
+      "rewardListId": 1685,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 50
+    },
+    {
+      "id": 666,
+      "description": "Replace a card in one of your decks.",
+      "name": "Upgrading",
+      "quota": 1,
+      "rewardListId": 1685,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 75
+    },
+    {
+      "id": 696,
+      "description": "Play $q Quickdraw cards.",
+      "name": "",
+      "quota": 5,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 697,
+      "description": "Play $q Excavate cards.",
+      "name": "",
+      "quota": 15,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 714,
+      "description": "Play $q games.",
+      "name": "Learning the Ropes",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 75
+    },
+    {
+      "id": 732,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 733,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 734,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 735,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 736,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 737,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 738,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 739,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 740,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 741,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 742,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 743,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 787,
+      "description": "Play $q Miniaturize or Mini cards. ",
+      "name": "",
+      "quota": 8,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 788,
+      "description": "Play $q Miniaturize or Mini cards. ",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 2250
+    },
+    {
+      "id": 901,
+      "description": "Play $q Drink spells. ",
+      "name": "",
+      "quota": 12,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 902,
+      "description": "Play $q Drink spells. ",
+      "name": "",
+      "quota": 15,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 2250
+    },
+    {
+      "id": 903,
+      "description": "Deal $q damage to enemy heroes.",
+      "name": "",
+      "quota": 80,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 900
+    },
+    {
+      "id": 923,
+      "description": "Deal $q damage to enemy heroes.",
+      "name": "",
+      "quota": 80,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 924,
+      "description": "Deal $q damage to enemy heroes.",
+      "name": "",
+      "quota": 80,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 800
+    },
+    {
+      "id": 925,
+      "description": "Deal $q damage to enemy heroes.",
+      "name": "",
+      "quota": 80,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 800
+    },
+    {
+      "id": 926,
+      "description": "Complete $q Daily Quests.",
+      "name": "",
+      "quota": 5,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 2250
+    },
+    {
+      "id": 1030,
+      "description": "Play $q Draenei.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 1031,
+      "description": "Play $q Starship Pieces.",
+      "name": "",
+      "quota": 20,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 1032,
+      "description": "Use your Hero Power $q times.",
+      "name": "",
+      "quota": 20,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 1033,
+      "description": "Play $q Battlecry cards.",
+      "name": "",
+      "quota": 50,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 1034,
+      "description": "Deal $q damage to enemy heroes.",
+      "name": "",
+      "quota": 200,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 1035,
+      "description": "Spend $q mana.",
+      "name": "",
+      "quota": 500,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 1036,
+      "description": "Win $q games of Tavern Brawl, Arena, or Battlegrounds.",
+      "name": "",
+      "quota": 5,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 1037,
+      "description": "Win $q games of Hearthstone's Ranked Mode.",
+      "name": "",
+      "quota": 5,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 2500
+    },
+    {
+      "id": 1132,
+      "description": "Imbue $q times.",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 1133,
+      "description": "Play $q minions\nthat have or give\nDark Gift.",
+      "name": "",
+      "quota": 20,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 1134,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1135,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1146,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1147,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1148,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1149,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1150,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1151,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1152,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1153,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1154,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1155,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1156,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1157,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1158,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1159,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1160,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1161,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1162,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1163,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1164,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1165,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1166,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1167,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1168,
+      "description": "Play $q games with Nozdormu the Eternal in your starting deck.",
+      "name": "",
+      "quota": 3,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1500
+    },
+    {
+      "id": 1311,
+      "description": "Play $q Lost City cards.\n<i>(Quest and Kindred cards count 2x!)</i>",
+      "name": "",
+      "quota": 75,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 1312,
+      "description": "Summon $q Lost City minions.\n<i>(Beasts, Elementals, and Murlocs count 2x!)</i>",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 1550,
+      "description": "Play $q Timeways cards.\n<i>(2x - Rewind and Legendary)</i>",
+      "name": "",
+      "quota": 75,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 1551,
+      "description": "Summon $q Timeways minions.\n<i>(2x - Beast, Dragon, and Undead)</i>",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 1697,
+      "description": "Play $q Cataclysm cards.\n<i>(2x - Herald and Shatter)</i>",
+      "name": "",
+      "quota": 75,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 1698,
+      "description": "Summon $q Cataclysm minions.\n<i>(2x - Colossal and Dragon)</i>",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    },
+    {
+      "id": 1834,
+      "description": "Play $q Violet Hold cards.\n<i>(2x - Prepare)</i>",
+      "name": "",
+      "quota": 75,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1750
+    },
+    {
+      "id": 1835,
+      "description": "Summon $q Violet Hold minions.\n<i>(2x - Legendary)</i>",
+      "name": "",
+      "quota": 10,
+      "rewardListId": 0,
+      "rewardTrackType": 1,
+      "rewardTrackXp": 1000
+    }
+  ]
+}

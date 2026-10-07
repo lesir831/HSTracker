@@ -9,6 +9,11 @@
 import Foundation
 
 class Database {
+    // Actual keyword tags in CardDefs 36.6; ReferencedTags do not qualify.
+    private static let accountQuestKeywords = [218: "BATTLECRY", 462: "QUEST", 1725: "QUESTLINE",
+                                               4028: "KINDRED", 3934: "REWIND", 4309: "HERALD",
+                                               4239: "SHATTER", 4240: "SHATTERED", 4354: "PREPARE",
+                                               GameTag.colossal.rawValue: "COLOSSAL"]
     static let mechanics: [Int: String] = [
         GameTag.windfury.rawValue: "WINDFURY",
         GameTag.taunt.rawValue: "TAUNT",
@@ -155,6 +160,11 @@ class Database {
                     currentCard?.mechanics.append(mechanic)
                 }
             } else {
+                // Quest conditions need the card's own keyword, not a reference
+                // to a keyword in its effect text. IDs verified in CardDefs 36.6.
+                if tag.value > 0, let keyword = Self.accountQuestKeywords[tag.id] {
+                    card.accountQuestKeywords.insert(keyword)
+                }
                 apply(tag: tag.id, value: tag.value)
             }
         }

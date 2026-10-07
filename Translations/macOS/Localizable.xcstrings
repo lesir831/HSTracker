@@ -1,6 +1,210 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "HearthArena_Enable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show HearthArena card ratings"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示 HearthArena 选牌评分"
+          }
+        }
+      }
+    },
+    "HearthArena_Help" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Class-specific base ratings; no deck synergy adjustment.\nRefreshed daily. Cached ratings are labeled."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按职业显示基础评分，不含牌组协同修正。\n每天刷新，离线缓存会标注。"
+          }
+        }
+      }
+    },
+    "HearthArena_OpenTierList" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open HearthArena tier list"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看 HearthArena 评分表"
+          }
+        }
+      }
+    },
+    "HearthArena_Loading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading ratings…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在读取评分…"
+          }
+        }
+      }
+    },
+    "HearthArena_ClassUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Class unavailable"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未识别职业"
+          }
+        }
+      }
+    },
+    "HearthArena_DualClassUnsupported" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No dual-class rating"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无双职业评分"
+          }
+        }
+      }
+    },
+    "HearthArena_BaseScore" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Base rating"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "基础评分"
+          }
+        }
+      }
+    },
+    "HearthArena_Cached" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cached base rating"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "基础评分 · 缓存"
+          }
+        }
+      }
+    },
+    "HearthArena_CachedKeyCard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Key card only · cached"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅主牌评分 · 缓存"
+          }
+        }
+      }
+    },
+    "HearthArena_KeyCard" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Key card only"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅主牌评分"
+          }
+        }
+      }
+    },
+    "HearthArena_NotListed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not in this class list"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "该职业暂无评分"
+          }
+        }
+      }
+    },
+    "HearthArena_Unavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ratings unavailable"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "评分暂不可用"
+          }
+        }
+      }
+    },
     "AccountProgress_CategoryBattlegroundsEvent" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -613,13 +817,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hover over Quests to view progress; click to keep it expanded. Unlock windows to drag the button."
+            "value" : "Click Quests to show or hide quest progress. The list stays open until you click again. Unlock windows to drag the button."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "悬停“任务”查看进度，点击可固定展开。解锁窗口后可拖动按钮调整位置。"
+            "value" : "点击“任务”显示或隐藏任务进度，展开后再次点击才会收起。解锁窗口后可拖动按钮调整位置。"
           }
         }
       }

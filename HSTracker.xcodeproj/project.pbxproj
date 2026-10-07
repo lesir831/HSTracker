@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1C0A0023000000100000001 /* Kanna in Frameworks */ = {isa = PBXBuildFile; productRef = A1C0A0023000000100000002 /* Kanna */; };
+		A1C0A0023000000100000004 /* HearthArenaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0A0023000000100000005 /* HearthArenaTests.swift */; };
 		A1C0A0013000000100000003 /* AccountProgressLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0A0013000000100000004 /* AccountProgressLifecycleTests.swift */; };
 		A1C0A0013000000100000005 /* AccountQuestOverlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0A0013000000100000006 /* AccountQuestOverlayTests.swift */; };
 		A1C0A0013000000100000007 /* AccountQuestMenuTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0A0013000000100000008 /* AccountQuestMenuTests.swift */; };
@@ -1919,6 +1921,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1C0A0023000000100000005 /* HearthArenaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HearthArenaTests.swift; sourceTree = "<group>"; };
 		A1C0A0013000000100000004 /* AccountProgressLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountProgressLifecycleTests.swift; sourceTree = "<group>"; };
 		A1C0A0013000000100000006 /* AccountQuestOverlayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountQuestOverlayTests.swift; sourceTree = "<group>"; };
 		A1C0A0013000000100000008 /* AccountQuestMenuTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountQuestMenuTests.swift; sourceTree = "<group>"; };
@@ -3820,6 +3823,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B882CC902FBBE364002234D6 /* libcoreclr.dylib in Frameworks */,
+				A1C0A0023000000100000001 /* Kanna in Frameworks */,
 				B8D75BF725BE032500446923 /* Sparkle in Frameworks */,
 				B8D75BBD25BCEACB00446923 /* TextAttributes in Frameworks */,
 				4367899F1CAC05DD00C962D1 /* Cocoa.framework in Frameworks */,
@@ -4225,6 +4229,7 @@
 				B8A1F0202FCD0020000A0020 /* CardTileThemeTests.swift */,
 				B8A1F0402FCD0040000A0040 /* OverlayWidgetPlacementTests.swift */,
 				A1C0A0013000000100000004 /* AccountProgressLifecycleTests.swift */,
+				A1C0A0023000000100000005 /* HearthArenaTests.swift */,
 				A1C0A0013000000100000006 /* AccountQuestOverlayTests.swift */,
 				A1C0A0013000000100000008 /* AccountQuestMenuTests.swift */,
 				B8A1F0422FCD0042000A0042 /* OverlayCanvasGeometryTests.swift */,
@@ -6693,6 +6698,7 @@
 			);
 			name = HSTracker;
 			packageProductDependencies = (
+				A1C0A0023000000100000002 /* Kanna */,
 				B8D75BAE25BCE68900446923 /* SwiftyBeaver */,
 				B8D75BBC25BCEACB00446923 /* TextAttributes */,
 				B8D75BC225BD10B600446923 /* OAuthSwift */,
@@ -6791,6 +6797,7 @@
 			);
 			mainGroup = 439C7E3F1C7772C000D29859;
 			packageReferences = (
+				A1C0A0023000000100000003 /* XCRemoteSwiftPackageReference "Kanna" */,
 				B8D75BAD25BCE68900446923 /* XCRemoteSwiftPackageReference "SwiftyBeaver" */,
 				B8D75BBB25BCEACB00446923 /* XCRemoteSwiftPackageReference "TextAttributes" */,
 				B8D75BC125BD10B600446923 /* XCRemoteSwiftPackageReference "OAuthSwift" */,
@@ -8839,6 +8846,7 @@
 				B8A1F0212FCD0021000A0021 /* CardTileThemeTests.swift in Sources */,
 				B8A1F0412FCD0041000A0041 /* OverlayWidgetPlacementTests.swift in Sources */,
 				A1C0A0013000000100000003 /* AccountProgressLifecycleTests.swift in Sources */,
+				A1C0A0023000000100000004 /* HearthArenaTests.swift in Sources */,
 				A1C0A0013000000100000005 /* AccountQuestOverlayTests.swift in Sources */,
 				A1C0A0013000000100000007 /* AccountQuestMenuTests.swift in Sources */,
 				B8A1F0432FCD0043000A0043 /* OverlayCanvasGeometryTests.swift in Sources */,
@@ -9423,6 +9431,11 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		A1C0A0023000000100000003 /* XCRemoteSwiftPackageReference "Kanna" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tid-kijyun/Kanna.git";
+			requirement = {kind = exactVersion; version = 5.2.7; };
+		};
 		3CB1A35B2E8C3A390090486F /* XCRemoteSwiftPackageReference "mixpanel-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/mixpanel/mixpanel-swift";
@@ -9538,6 +9551,7 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		A1C0A0023000000100000002 /* Kanna */ = {isa = XCSwiftPackageProductDependency; package = A1C0A0023000000100000003 /* XCRemoteSwiftPackageReference "Kanna" */; productName = Kanna; };
 		3CB1A35C2E8C3A400090486F /* Mixpanel */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 3CB1A35B2E8C3A390090486F /* XCRemoteSwiftPackageReference "mixpanel-swift" */;

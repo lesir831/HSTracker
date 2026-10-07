@@ -90,7 +90,6 @@ struct AccountQuestOverlayPreferencesSection: View {
     @SwiftUI.State private var enabled = Settings.accountQuestOverlayEnabled
     @SwiftUI.State private var showTraditional = Settings.accountQuestShowTraditional
     @SwiftUI.State private var showBattlegrounds = Settings.accountQuestShowBattlegrounds
-    @SwiftUI.State private var pinned = Settings.accountQuestOverlayPinned
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -119,12 +118,6 @@ struct AccountQuestOverlayPreferencesSection: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Toggle(String.localizedString("AccountProgress_OverlayPinned", comment: ""),
-                   isOn: Binding(get: { pinned }, set: { newValue in
-                       pinned = newValue
-                       Settings.accountQuestOverlayPinned = newValue
-                   }))
-                .disabled(!enabled)
             Text(String.localizedString("AccountProgress_OverlayHelp", comment: ""))
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -138,9 +131,6 @@ struct AccountQuestOverlayPreferencesSection: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name(rawValue: Settings.account_quest_show_battlegrounds))) { _ in
             showBattlegrounds = Settings.accountQuestShowBattlegrounds
-        }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name(rawValue: Settings.account_quest_overlay_pinned))) { _ in
-            pinned = Settings.accountQuestOverlayPinned
         }
     }
 }

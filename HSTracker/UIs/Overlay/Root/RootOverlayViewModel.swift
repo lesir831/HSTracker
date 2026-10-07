@@ -43,6 +43,7 @@ class RootOverlayViewModel: ObservableObject {
     let battlegroundsInspiration = BattlegroundsInspirationViewModel()
     let battlegroundsMinionPinning = BattlegroundsMinionPinningViewModel()
     let arenaPickHelper = ArenaPickHelperViewModel()
+    let hearthArenaPick = HearthArenaPickViewModel()
     let arenaPreDraft = ArenaPreDraftViewModel()
     let battlegroundsSession = BattlegroundsSessionViewModel()
     let bobsBuddy = BobsBuddyPanelViewModel()

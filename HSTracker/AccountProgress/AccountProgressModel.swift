@@ -39,6 +39,7 @@ final class AccountProgressModel: ObservableObject {
     private var nativeQuestDefinitionScope: String?
     private var fallbackDefinitionError = false
     private var lastMenuRefresh = Date.distantPast
+    private var lastSnapshotRefresh = Date.distantPast
 
     var questTrackingStatus: String {
         guard currentMatch != nil else { return "AccountProgress_NoActiveMatch" }
@@ -110,7 +111,7 @@ final class AccountProgressModel: ObservableObject {
         timer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
             guard let self else { return }
             if self.currentMatch != nil, self.panelVisible || self.overlayEnabled || !self.pinned.isEmpty {
-                self.refresh(full: false)
+                self.refresh(full: self.lastSnapshotRefresh.timeIntervalSinceNow < -15)
             } else if self.panelVisible || self.overlayEnabled, self.lastMenuRefresh.timeIntervalSinceNow < -15 {
                 self.lastMenuRefresh = Date()
                 if self.questDefinitions.isEmpty || self.definitionError { self.loadQuestDefinitions() }
@@ -127,7 +128,8 @@ final class AccountProgressModel: ObservableObject {
         refresh(full: true)
     }
 
-    func beginMatch(_ id: String, spectator: Bool, questEligible: Bool, overlayEligible: Bool? = nil) {
+    func beginMatch(_ id: String, spectator: Bool, questEligible: Bool, overlayEligible: Bool? = nil,
+                    rewardTrack: Int = 1) {
         revision += 1
         menuActive = false
         currentMatch = spectator ? nil : id
@@ -135,7 +137,7 @@ final class AccountProgressModel: ObservableObject {
         estimatesEligible = questEligible && !spectator
         baselinePending = !spectator && enabled
         session.endMatch()
-        questEstimate.beginMatch(id, eligible: enabled && !spectator && questEligible)
+        questEstimate.beginMatch(id, eligible: enabled && !spectator && questEligible, rewardTrack: rewardTrack)
         guard enabled else { return }
         if automaticallyPoll && questDefinitions.isEmpty { loadQuestDefinitions() }
         logger.debug("Quest tracking started: eligible=\(!spectator && questEligible), hasMatchID=\(!id.isEmpty)")
@@ -211,6 +213,7 @@ final class AccountProgressModel: ObservableObject {
                         }
                     }
                     if let snapshot = frame.reading.snapshot {
+                        self.lastSnapshotRefresh = Date()
                         self.questEstimate.bind(snapshot, scope: frame.scope)
                         self.applySnapshot(snapshot, scope: frame.scope)
                         self.saveCache(snapshot, scope: frame.scope)
@@ -267,6 +270,11 @@ final class AccountProgressModel: ObservableObject {
         if questEstimate.observe(metric, total: total, matchID: matchID, isLocalPlayer: isLocalPlayer) {
             logger.debug("Quest estimate sample: \(metric.rawValue)=\(total)")
         }
+    }
+
+    func observeQuest(_ event: AccountQuestEstimate.Event, eventID: String, matchID: String) {
+        guard enabled else { return }
+        questEstimate.observe(event, eventID: eventID, matchID: matchID, isLocalPlayer: true)
     }
 
     private struct Cache: Codable {

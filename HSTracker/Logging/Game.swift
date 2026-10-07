@@ -34,6 +34,7 @@ struct PlayingDeck {
  * Game object represents the current state of the tracker
  */
 class Game: NSObject, PowerEventHandler {
+    let accountQuestLogTracker = AccountQuestLogTracker()
 	/**
 	 * View controller of this game object
 	 */
@@ -2029,12 +2030,15 @@ class Game: NSObject, PowerEventHandler {
         counterManager.reset()
         let progressMatchID = gameId
         let progressSpectator = spectator
-        let progressQuestEligible = isTraditionalHearthstoneMatch && currentGameMode != .practice
+        let progressQuestEligible = AccountQuestLogBridge.isEligible(gameType: currentGameType)
         let progressOverlayEligible = progressQuestEligible || isBattlegroundsMatch()
+        let progressRewardTrack = isBattlegroundsMatch() ? 2 : 1
+        accountQuestLogTracker.reset()
         DispatchQueue.main.async {
             AccountProgressModel.shared.beginMatch(progressMatchID, spectator: progressSpectator,
                                                   questEligible: progressQuestEligible,
-                                                  overlayEligible: progressOverlayEligible)
+                                                  overlayEligible: progressOverlayEligible,
+                                                  rewardTrack: progressRewardTrack)
         }
 
         

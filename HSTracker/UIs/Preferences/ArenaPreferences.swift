@@ -11,6 +11,37 @@ import Foundation
 /// which lives under its Overlay page; HSTracker gives each game mode its own
 /// pane, so this follows BattlegroundsPreferences instead.
 class ArenaPreferences: PreferencePaneController, PreferencePane {
+    private var hearthArenaCheckbox: NSButton?
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        guard let stack = view as? NSStackView else { return }
+        let checkbox = NSButton(checkboxWithTitle: String.localizedString("HearthArena_Enable", comment: ""),
+                                target: self, action: #selector(hearthArenaChanged(_:)))
+        checkbox.state = Settings.showHearthArenaScores ? .on : .off
+        stack.addArrangedSubview(checkbox)
+        hearthArenaCheckbox = checkbox
+        let help = NSTextField(wrappingLabelWithString: String.localizedString("HearthArena_Help", comment: ""))
+        help.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+        help.textColor = .secondaryLabelColor
+        help.preferredMaxLayoutWidth = 420
+        stack.addArrangedSubview(help)
+        let link = NSButton(title: String.localizedString("HearthArena_OpenTierList", comment: ""),
+                            target: self, action: #selector(openHearthArena))
+        link.bezelStyle = .inline
+        stack.addArrangedSubview(link)
+        for subview in [checkbox, help, link] {
+            subview.translatesAutoresizingMaskIntoConstraints = false
+            subview.leadingAnchor.constraint(equalTo: stack.leadingAnchor, constant: 20).isActive = true
+            subview.trailingAnchor.constraint(equalTo: stack.trailingAnchor, constant: -20).isActive = true
+        }
+    }
+
+    @objc private func hearthArenaChanged(_ sender: NSButton) {
+        Settings.showHearthArenaScores = sender.state == .on
+    }
+
+    @objc private func openHearthArena() { NSWorkspace.shared.open(HearthArenaTierList.sourceURL) }
     var preferencePaneIdentifier = PreferencePaneIdentifier.arena
 
     var preferencePaneTitle = String.localizedString("Arena", comment: "")
@@ -28,6 +59,7 @@ class ArenaPreferences: PreferencePaneController, PreferencePane {
 
     override func viewWillAppear() {
         super.viewWillAppear()
+        hearthArenaCheckbox?.state = Settings.showHearthArenaScores ? .on : .off
 
         guard enableArenasmithOverlay != nil else {
             return

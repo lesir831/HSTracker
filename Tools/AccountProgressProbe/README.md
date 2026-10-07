@@ -76,17 +76,18 @@ the final saved selection is traditional on and Battlegrounds off. The 46 app
 tests include immediate filtering in open menu/match panels, preserving hidden
 quest estimates and leaving authoritative snapshots unchanged.
 
-- Weekly hero-power quest 1032 (quota 20) and mana quest 1035 (quota 500) now
-  show a separately labeled live estimate from the local player's cumulative
-  `NUM_TIMES_HERO_POWER_USED_THIS_GAME` and `NUM_RESOURCES_SPENT_THIS_GAME`
-  log tags. The confirmed account value remains visible. These estimates are
+- Ordinary daily/weekly action quests and Battlegrounds action quests now
+  show separately labeled live estimates from local player tags, card plays,
+  summons, damage and trigger blocks. The complete ID/quota/condition inventory
+  and settlement-only exceptions are in [QUESTS.md](QUESTS.md).
+  The confirmed account value remains visible. These estimates are
   never persisted, never count opponent/spectator tags, and are discarded at
   match end. Unknown quest IDs/quotas and completion-based quests stay on the
   server snapshot with an explicit after-match label. Mode eligibility and the
   final credited amount remain subject to server settlement. Open/enable the
   feature before the match; no opening baseline is invented mid-game.
 - Quest and achievement snapshots refresh after scene changes and match end;
-  the visible menu panel also retries every 15 seconds.
+  active matches and the visible menu also retry every 15 seconds.
 - While tracking an own match with a visible panel or pins, the live achievement
   table is sampled every 1.5 seconds on a utility queue. Spectator matches never
   start a live session. Opening the feature midway through a game does not invent
@@ -216,7 +217,7 @@ standard Chinese class quest on one line at the existing text size. Confirmed va
 log estimates; an estimated completed quest is labeled as awaiting settlement.
 Unknown definitions display a loading state without inventing a goal. Practice
 and spectator sessions do not show this widget. Battlegrounds sessions can show
-confirmed quest progress without starting traditional-game quest estimates.
+confirmed quest progress; Battlegrounds matches use their own reward-track estimates.
 Game end/closure clears it; unavailable account identity hides task data. Enabling
 mid-match shows account progress but waits until the next match for estimates.
 
@@ -241,7 +242,7 @@ class, mode and bonus conditions do not otherwise filter it out.
 The panel identifies ordinary, Battlegrounds and event daily/weekly tasks when
 those types are supplied by the client. It displays the game's confirmed total,
 so objective-specific conditions and bonuses remain governed by game settlement.
-Only the two verified quest IDs described above have local live estimates.
+The explicit rules in [QUESTS.md](QUESTS.md) supply separate local live estimates.
 
 For older caches or unavailable native metadata, known ordinary/Battlegrounds
 tasks remain visible as unclassified quests. The public feed has no reliable
@@ -325,7 +326,7 @@ translated prose as executable rules. Row heights include both text blocks.
 
 Event progress is **snapshot-based**, including all credit already calculated by
 the game. Local additive/multiplicative bonus estimation is not implemented;
-event rows explicitly bypass the two ordinary-quest estimates, even on a reused
+event rows explicitly bypass ordinary-quest estimates, even on a reused
 ID/quota. Match rows say that progress updates after settlement. A later server
 snapshot replaces the aggregate once, without multiplying or adding it again.
 

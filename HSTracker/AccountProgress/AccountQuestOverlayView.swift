@@ -40,10 +40,9 @@ struct AccountQuestOverlayView: View {
                         .preference(key: InteractiveRegionPreferenceKey.self,
                                     value: needsScroll ? [pixels(panelFrame)] : [])
                 }
-                Button(action: { viewModel.togglePinned() }) { header }
+                Button(action: { viewModel.toggleExpanded() }) { header }
                     .buttonStyle(PlainButtonStyle())
-                    .accessibility(label: Text(text(viewModel.isPinned
-                        ? "AccountProgress_UnpinOverlay" : "AccountProgress_PinOverlay")))
+                    .accessibility(label: Text(text("AccountProgress_ToggleMenuQuests")))
                     .frame(width: headerFrame.width, height: headerFrame.height)
                     .offset(x: headerFrame.minX, y: headerFrame.minY)
                     .preference(key: InteractiveRegionPreferenceKey.self,
@@ -55,8 +54,8 @@ struct AccountQuestOverlayView: View {
             }
         }
         .frame(width: canvasWidth, height: 1080, alignment: .topLeading)
-        // Include the gap as hover-only, so crossing from button to panel
-        // cannot close it. Empty canvas pixels still pass every click through.
+        // Suppress card tooltips under the quest list without changing its
+        // visibility. Empty canvas pixels still pass every click through.
         .preference(key: HoverRegionPreferenceKey.self,
                     value: viewModel.isShown && isLocked
                         ? [HoverRegion(id: HoverRegionID.accountQuests,

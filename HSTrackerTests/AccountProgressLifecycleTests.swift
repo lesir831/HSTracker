@@ -21,6 +21,218 @@ final class AccountProgressLifecycleTests: XCTestCase {
 
     private let quest = AccountProgressRecord(id: 1035, progress: 176, status: 2)
 
+    func testScreenshotObjectivesReceiveLogEventsAndSettleWithoutDoubleCounting() async throws {
+        let quests = [AccountProgressRecord(id: 1834, progress: 8, status: 2),
+                      .init(id: 1034, progress: 46, status: 2), .init(id: 1037, progress: 1, status: 2),
+                      .init(id: 490, progress: 2, status: 2)]
+        let definitions = [AccountQuestDefinition(id: 1834, description: "使用$q张紫罗兰监狱卡牌。\n<i>（筹备牌计为双倍！）</i>", quota: 75, rewardTrackType: 1, schedule: .weekly),
+                           .init(id: 1034, description: "对敌方英雄造成$q点伤害。", quota: 200, rewardTrackType: 1, schedule: .weekly),
+                           .init(id: 1037, description: "在传统对战的排名对战模式中赢得$q场对战。", quota: 5, rewardTrackType: 1, schedule: .weekly),
+                           .init(id: 490, description: "施放$q个火焰或暗影法术。", quota: 12, rewardTrackType: 1, schedule: .daily)]
+        let source = Source(metadataReading(quests: quests))
+        let model = AccountProgressModel(enabled: true, automaticallyPoll: false, persists: false,
+            definitions: Dictionary(uniqueKeysWithValues: definitions.map { ($0.id, $0) }), reader: source.read)
+        model.beginMatch("screenshot", spectator: false, questEligible: true)
+        await idle(model)
+        let overlay = AccountQuestOverlayViewModel(model: model)
+        let tracker = AccountQuestLogTracker()
+        let card = Card()
+        card.id = "QUEST_TEST_PREPARE"; card.type = .spell; card.set = .escapefrom_violet_hold
+        card.spellSchool = .fire; card.accountQuestKeywords = ["PREPARE"]
+        Cards.cardsById[card.id] = card
+        defer { Cards.cardsById.removeValue(forKey: card.id) }
+        let spell = Entity(id: 10)
+        spell.cardId = card.id; spell[.cardtype] = CardType.spell.rawValue; spell[.controller] = 1; spell[.zone] = Zone.hand.rawValue
+        let hero = Entity(id: 20)
+        hero[.cardtype] = CardType.hero.rawValue; hero[.controller] = 2
+        let entities = [10: spell, 20: hero]
+        let context = AccountQuestLogTracker.Context(playerID: 1, opponentID: 2, mulliganDone: true,
+            battlegrounds: false, combat: false, turn: 3, defenderID: 0, entity: { entities[$0] })
+        func publish(_ samples: [AccountQuestLogTracker.Sample]) {
+            for sample in samples {
+                switch sample {
+                case .action(let event, let id): model.observeQuest(event, eventID: id, matchID: "screenshot")
+                case .cumulative(let metric, let total): model.observeQuest(metric, total: total, matchID: "screenshot", isLocalPlayer: true)
+                }
+            }
+        }
+        let play = Block(parent: nil, id: 1, type: "PLAY", cardId: card.id, target: nil, trigger: nil)
+        play.sourceEntityId = spell.id
+        publish(tracker.blockStarted(play, context: context))
+        spell[.zone] = Zone.play.rawValue
+        let played = tracker.tagChanged(.zone, entity: spell, value: Zone.play.rawValue,
+                                       previous: Zone.hand.rawValue, block: play, context: context)
+        publish(played); publish(played) // A replayed delivery is idempotent.
+        let power = Block(parent: play, id: 2, type: "POWER", cardId: card.id, target: nil, trigger: nil)
+        power.sourceEntityId = spell.id
+        publish(tracker.tagChanged(.predamage, entity: hero, value: 6, previous: 0, block: power, context: context))
+        publish(tracker.tagChanged(.armor, entity: hero, value: 0, previous: 2, block: power, context: context))
+        publish(tracker.tagChanged(.damage, entity: hero, value: 4, previous: 0, block: power, context: context))
+        // Exercise the actual Combine publication path without a manual overlay.update().
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(overlay.rows.map(\.total), [10, 52, 1, 3])
+        XCTAssertEqual(overlay.rows.map(\.estimatedDelta), [2, 6, nil, 1])
+        XCTAssertEqual(model.session.snapshot?.quests.map(\.progress), [8, 46, 1, 2])
+        XCTAssertFalse(overlay.rows[0].detail.isEmpty)
+
+        let height = overlay.rows.reduce(AccountQuestOverlayLayout.panelChromeHeight) { $0 + $1.displayHeight }
+        let frame = CGRect(x: 0, y: 0, width: AccountQuestOverlayLayout.panelWidth, height: height)
+        let view = NSHostingView(rootView: AccountQuestOverlayPanel(rows: overlay.rows,
+            status: overlay.status, inMatch: true, needsScroll: false).frame(width: frame.width, height: frame.height))
+        let window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false; window.contentView = view; view.frame = frame
+        view.layoutSubtreeIfNeeded()
+        try await Task.sleep(nanoseconds: 100_000_000)
+        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: bitmap)
+        let directory = URL(fileURLWithPath: "/tmp/HSTracker-QuestOverlay-QA", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: directory.appendingPathComponent("live-quests.png"))
+        window.close()
+
+        source.set(metadataReading(quests: zip(quests, [10, 52, 1, 3]).map { .init(id: $0.id, progress: $1, status: 2) }))
+        model.refresh(full: true)
+        await idle(model)
+        overlay.update()
+        XCTAssertEqual(overlay.rows.map(\.total), [10, 52, 1, 3])
+        model.endMatch()
+        overlay.update()
+        XCTAssertEqual(overlay.rows.map(\.total), [10, 52, 1, 3])
+        XCTAssertTrue(overlay.rows.allSatisfy { $0.estimatedDelta == nil })
+    }
+
+    func testDamageAttributionImmuneSelfDamageFatigueAndRetaliation() {
+        let tracker = AccountQuestLogTracker()
+        let hero = Entity(id: 20); hero[.cardtype] = CardType.hero.rawValue; hero[.controller] = 2
+        let defender = Entity(id: 10); defender[.cardtype] = CardType.minion.rawValue; defender[.controller] = 1
+        let entities = [10: defender, 20: hero]
+        let context = AccountQuestLogTracker.Context(playerID: 1, opponentID: 2, mulliganDone: true,
+            battlegrounds: false, combat: false, turn: 3, defenderID: 10, entity: { entities[$0] })
+        func hit(_ block: Block?, landed: Bool) -> Int {
+            _ = tracker.tagChanged(.predamage, entity: hero, value: 5, previous: 0, block: block, context: context)
+            let samples = landed ? tracker.tagChanged(.damage, entity: hero, value: 5, previous: 0, block: block, context: context) : []
+            _ = tracker.tagChanged(.predamage, entity: hero, value: 0, previous: 5, block: block, context: context)
+            return samples.reduce(0) { total, sample in
+                if case .action(.add(.enemyHeroDamage, let value), _) = sample { return total + value }
+                return total
+            }
+        }
+        let enemySpell = Block(parent: nil, id: 1, type: "POWER", cardId: nil, target: nil, trigger: nil)
+        enemySpell.sourceEntityId = hero.id
+        XCTAssertEqual(hit(enemySpell, landed: true), 0)
+        let attack = Block(parent: nil, id: 2, type: "ATTACK", cardId: nil, target: nil, trigger: nil)
+        attack.sourceEntityId = hero.id
+        XCTAssertEqual(hit(attack, landed: true), 5)
+        let friendlySpell = Block(parent: nil, id: 3, type: "POWER", cardId: nil, target: nil, trigger: nil)
+        friendlySpell.sourceEntityId = defender.id
+        XCTAssertEqual(hit(friendlySpell, landed: false), 0)
+        XCTAssertEqual(hit(friendlySpell, landed: true), 5)
+        XCTAssertEqual(hit(nil, landed: true), 0)
+        XCTAssertTrue(tracker.tagChanged(.damage, entity: hero, value: 0, previous: 5, block: friendlySpell, context: context).isEmpty)
+        XCTAssertTrue(tracker.tagChanged(.armor, entity: hero, value: 0, previous: 10, block: friendlySpell, context: context).isEmpty)
+    }
+
+    func testDrawTagsResetByTurnAndModesRejectPractice() {
+        let tracker = AccountQuestLogTracker()
+        let player = Entity(id: 3); player[.player_id] = 1
+        func sample(_ value: Int, previous: Int, turn: Int, mulligan: Bool = true) -> Int {
+            let context = AccountQuestLogTracker.Context(playerID: 1, opponentID: 2, mulliganDone: mulligan,
+                battlegrounds: false, combat: false, turn: turn, defenderID: 0, entity: { _ in nil })
+            return tracker.tagChanged(.num_cards_drawn_this_turn, entity: player, value: value, previous: previous,
+                                      block: nil, context: context).reduce(0) { total, sample in
+                if case .action(.add(.cardsDrawn, let value), _) = sample { return total + value }
+                return total
+            }
+        }
+        XCTAssertEqual(sample(3, previous: 0, turn: 0, mulligan: false), 0)
+        XCTAssertEqual(sample(1, previous: 0, turn: 1), 1)
+        XCTAssertEqual(sample(3, previous: 1, turn: 1), 2)
+        XCTAssertEqual(sample(2, previous: 3, turn: 1), 0)
+        XCTAssertEqual(sample(3, previous: 2, turn: 1), 0)
+        XCTAssertEqual(sample(0, previous: 3, turn: 2), 0)
+        XCTAssertEqual(sample(1, previous: 0, turn: 2), 1)
+        for type in [GameType.gt_unknown, .gt_vs_ai, .gt_tutorial, .gt_test, .gt_mercenaries_pve,
+                     .gt_battlegrounds_ai_vs_ai, .gt_battlegrounds_duo_vs_ai] {
+            XCTAssertFalse(AccountQuestLogBridge.isEligible(gameType: type))
+        }
+        for type in [GameType.gt_ranked, .gt_casual, .gt_vs_friend, .gt_arena, .gt_tavernbrawl, .gt_battlegrounds, .gt_battlegrounds_duo] {
+            XCTAssertTrue(AccountQuestLogBridge.isEligible(gameType: type))
+        }
+    }
+
+    func testDeathrattlesTurnsAndBattlegroundsActionSources() {
+        let tracker = AccountQuestLogTracker()
+        let player = Entity(id: 3); player[.player_id] = 1
+        let minion = Entity(id: 10); minion[.cardtype] = CardType.minion.rawValue; minion[.controller] = 1
+        minion[.zone] = Zone.play.rawValue
+        let shop = Entity(id: 20); shop[.cardtype] = CardType.minion.rawValue; shop[.controller] = 2
+        shop[.zone] = Zone.play.rawValue
+        let entities = [3: player, 10: minion, 20: shop]
+        var context = AccountQuestLogTracker.Context(playerID: 1, opponentID: 2, mulliganDone: true,
+            battlegrounds: true, combat: false, turn: 3, defenderID: 0, entity: { entities[$0] })
+        func amount(_ samples: [AccountQuestLogTracker.Sample], metric: AccountQuestEstimate.Metric) -> Int {
+            samples.reduce(0) { total, sample in
+                if case .action(.add(let kind, let value), _) = sample, kind == metric { return total + value }
+                return total
+            }
+        }
+        let purchase = Block(parent: nil, id: 1, type: "PLAY", cardId: nil, target: nil, trigger: nil)
+        purchase.sourceEntityId = shop.id
+        _ = tracker.blockStarted(purchase, context: context)
+        shop[.controller] = 1; shop[.zone] = Zone.hand.rawValue
+        XCTAssertEqual(amount(tracker.tagChanged(.zone, entity: shop, value: Zone.hand.rawValue,
+            previous: Zone.play.rawValue, block: purchase, context: context), metric: .cardsBought), 1)
+        XCTAssertEqual(amount(tracker.tagChanged(.zone, entity: shop, value: Zone.hand.rawValue,
+            previous: Zone.play.rawValue, block: purchase, context: context), metric: .cardsBought), 0)
+        // A friendly minion bouncing into hand is not a purchase.
+        XCTAssertEqual(amount(tracker.tagChanged(.zone, entity: minion, value: Zone.hand.rawValue,
+            previous: Zone.play.rawValue, block: purchase, context: context), metric: .cardsBought), 0)
+        XCTAssertEqual(amount(tracker.tagChanged(.player_tech_level, entity: player, value: 2,
+            previous: 1, block: nil, context: context), metric: .tavernUpgrades), 1)
+        XCTAssertTrue(tracker.tagChanged(.player_tech_level, entity: player, value: 1,
+            previous: 0, block: nil, context: context).isEmpty)
+        context = .init(playerID: 1, opponentID: 2, mulliganDone: true, battlegrounds: true,
+                        combat: true, turn: 3, defenderID: 0, entity: { entities[$0] })
+        minion[.predamage] = 3
+        XCTAssertEqual(amount(tracker.tagChanged(.divine_shield, entity: minion, value: 0,
+            previous: 1, block: nil, context: context), metric: .divineShields), 1)
+        minion[.predamage] = 0
+        XCTAssertTrue(tracker.tagChanged(.divine_shield, entity: minion, value: 0,
+            previous: 1, block: nil, context: context).isEmpty)
+        minion[.health] = 5; minion[.damage] = 5
+        XCTAssertEqual(amount(tracker.tagChanged(.zone, entity: minion, value: Zone.graveyard.rawValue,
+            previous: Zone.play.rawValue, block: nil, context: context), metric: .minionsDestroyed), 1)
+        let deathrattle = Block(parent: nil, id: 5, type: "TRIGGER", cardId: nil, target: nil, trigger: "DEATHRATTLE")
+        deathrattle.sourceEntityId = minion.id
+        XCTAssertEqual(amount(tracker.blockStarted(deathrattle, context: context), metric: .deathrattles), 1)
+        minion[.controller] = 2
+        XCTAssertTrue(tracker.blockStarted(deathrattle, context: context).isEmpty)
+        context = .init(playerID: 1, opponentID: 2, mulliganDone: true, battlegrounds: false,
+                        combat: false, turn: 3, defenderID: 0, entity: { entities[$0] }, localTurn: true)
+        XCTAssertEqual(amount(tracker.tagChanged(.step, entity: Entity(id: 1), value: Step.main_start.rawValue,
+            previous: Step.main_start_triggers.rawValue, block: nil, context: context), metric: .turnsTaken), 1)
+        context.localTurn = false
+        XCTAssertTrue(tracker.tagChanged(.step, entity: Entity(id: 1), value: Step.main_start.rawValue,
+            previous: Step.main_start_triggers.rawValue, block: nil, context: context).isEmpty)
+    }
+
+    func testActualCardDefinitionsAndPowerBlockMetadata() throws {
+        let database = Database()
+        database.loadDatabase(splashscreen: nil, withLanguages: [.enUS])
+        XCTAssertTrue(try XCTUnwrap(Cards.any(byId: "JAIL_321")).accountQuestKeywords.contains("PREPARE"))
+        XCTAssertTrue(try XCTUnwrap(Cards.any(byId: "CATA_134")).accountQuestKeywords.contains("SHATTER"))
+        // Brann's text references Battlecry; Brann himself has no Battlecry.
+        XCTAssertFalse(try XCTUnwrap(Cards.any(byId: "LOE_077")).accountQuestKeywords.contains("BATTLECRY"))
+        let game = Game(hearthstoneRunState: HearthstoneRunState(isRunning: false, isActive: false))
+        let parser = PowerGameStateParser(with: game)
+        for (index, type) in ["PLAY", "ATTACK", "TRIGGER"].enumerated() {
+            let line = "D 12:00:00.0000000 GameState.DebugPrintPower() - BLOCK_START BlockType=\(type) Entity=[entityName=Test id=10 zone=PLAY zonePos=1 cardId=JAIL_321 player=1] EffectCardId= EffectIndex=0 Target=0 SubOption=-1 TriggerKeyword=DEATHRATTLE"
+            parser.handle(logLine: LogLine(namespace: .power, line: line))
+            XCTAssertEqual(parser.currentBlock?.sourceEntityId, 10, "Block \(index)")
+            XCTAssertEqual(parser.currentBlock?.triggerKeyword, "DEATHRATTLE")
+        }
+    }
+
     func testEventSettlementChainReplacementAndMetadataRecovery() async throws {
         let catalog = Dictionary(uniqueKeysWithValues: try HistoricalEventQuestFixtures.load().map { ($0.id, $0) })
         func native(_ id: Int, chain: Bool?, pool: Int = 20) throws -> AccountNativeQuestDefinition {
@@ -36,7 +248,7 @@ final class AccountProgressLifecycleTests: XCTestCase {
             definitions: catalog, showTraditionalQuests: true, showBattlegroundsQuests: false, reader: source.read)
         model.beginMatch("event-game", spectator: false, questEligible: true)
         await idle(model)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
+        let overlay = AccountQuestOverlayViewModel(model: model)
         XCTAssertEqual(overlay.rows.map(\.id), [1890, 1904])
         XCTAssertEqual(overlay.rows.first?.categoryKey, "AccountProgress_CategoryEventChain")
         model.observeQuest(.manaSpent, total: 100, matchID: "event-game", isLocalPlayer: true)
@@ -101,7 +313,7 @@ final class AccountProgressLifecycleTests: XCTestCase {
             definitions: definitions, showTraditionalQuests: true, showBattlegroundsQuests: false, reader: source.read)
         model.refresh(full: true)
         await idle(model)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
+        let overlay = AccountQuestOverlayViewModel(model: model)
         XCTAssertEqual(overlay.rows.count, 3)
         let height = overlay.rows.reduce(AccountQuestOverlayLayout.panelChromeHeight) { $0 + $1.displayHeight }
         let frame = CGRect(x: 0, y: 0, width: AccountQuestOverlayLayout.panelWidth, height: height)
@@ -246,7 +458,7 @@ final class AccountProgressLifecycleTests: XCTestCase {
         let model = makeOverlayModel()
         model.beginMatch("battlegrounds", spectator: false, questEligible: false, overlayEligible: true)
         await idle(model)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
+        let overlay = AccountQuestOverlayViewModel(model: model)
         XCTAssertTrue(overlay.isShown)
         XCTAssertFalse(overlay.rows.isEmpty)
         XCTAssertTrue(overlay.rows.allSatisfy { $0.estimatedDelta == nil })
@@ -272,7 +484,7 @@ final class AccountProgressLifecycleTests: XCTestCase {
         XCTAssertEqual(model.questDefinitions[1035]?.schedule, .weekly)
         XCTAssertEqual(model.questDefinitions[1035]?.rewardTrackType, 1)
         XCTAssertEqual(model.questDefinitions[1035]?.text, "Spend 500 mana.")
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
+        let overlay = AccountQuestOverlayViewModel(model: model)
         XCTAssertEqual(overlay.rows.map(\.id), [1035])
 
         // A reroll/claim replaces the server list; stale rows and their native
@@ -304,7 +516,7 @@ final class AccountProgressLifecycleTests: XCTestCase {
                                          definitions: fallback, showTraditionalQuests: true, showBattlegroundsQuests: true, reader: source.read)
         model.refresh(full: true)
         await idle(model)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
+        let overlay = AccountQuestOverlayViewModel(model: model)
         XCTAssertEqual(overlay.rows.map(\.id), [3001, 3002])
 
         let advanced = [AccountProgressRecord(id: 3001, progress: 4, status: 2),
@@ -358,7 +570,7 @@ final class AccountProgressLifecycleTests: XCTestCase {
         let model = AccountProgressModel(enabled: true, automaticallyPoll: false, persists: false, showTraditionalQuests: true, showBattlegroundsQuests: true, reader: source.read)
         model.refresh(full: true)
         await idle(model)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
+        let overlay = AccountQuestOverlayViewModel(model: model)
         XCTAssertEqual(model.questDefinitions[quest.id]?.schedule, .daily)
 
         let cases: [(pool: Int, period: Int?, quota: Int, schedule: AccountQuestSchedule)] = [
@@ -407,7 +619,7 @@ final class AccountProgressLifecycleTests: XCTestCase {
             model.refresh(full: true)
             await idle(model)
             XCTAssertEqual(model.questDefinitions[quest.id], fallback)
-            let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
+            let overlay = AccountQuestOverlayViewModel(model: model)
             XCTAssertEqual(overlay.rows.map(\.id), [quest.id])
             XCTAssertEqual(overlay.rows.first?.categoryKey, "AccountProgress_CategoryEvent")
         }
@@ -432,25 +644,44 @@ final class AccountProgressLifecycleTests: XCTestCase {
         model.refresh(full: true)
         await idle(model)
         XCTAssertEqual(model.questDefinitions[quest.id], fallback)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
+        let overlay = AccountQuestOverlayViewModel(model: model)
         XCTAssertEqual(overlay.rows.map(\.id), [quest.id])
         XCTAssertEqual(overlay.rows.first?.categoryKey, "AccountProgress_CategoryEvent")
     }
 
-    func testOverlayUpdatesWithoutOpeningDiagnosticWindowAndHidesAtEnd() async throws {
+    func testQuestListOnlyTogglesOnClickWhileProgressContinuesUpdating() async throws {
         let model = makeOverlayModel()
+        let overlay = AccountQuestOverlayViewModel(model: model)
+        overlay.toggleExpanded()
+        XCTAssertFalse(overlay.isExpanded)
         model.beginMatch("game", spectator: false, questEligible: true)
         await idle(model)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
         XCTAssertFalse(model.panelVisible)
         XCTAssertTrue(overlay.isShown)
         XCTAssertEqual(overlay.rows.first?.estimatedDelta, 0)
-        overlay.expireReveal()
         XCTAssertFalse(overlay.isExpanded)
         model.observeQuest(.heroPowerUses, total: 1, matchID: "game", isLocalPlayer: true)
         try await Task.sleep(nanoseconds: 50_000_000)
         XCTAssertEqual(overlay.rows.first?.total, 10)
+        XCTAssertFalse(overlay.isExpanded)
+
+        overlay.toggleExpanded()
         XCTAssertTrue(overlay.isExpanded)
+        model.observeQuest(.heroPowerUses, total: 2, matchID: "game", isLocalPlayer: true)
+        // Wait beyond the former five-second reveal timeout. Opening the list
+        // must not stop updates, dismiss it, or open the diagnostic window.
+        try await Task.sleep(nanoseconds: 5_300_000_000)
+        XCTAssertEqual(overlay.rows.first?.total, 11)
+        XCTAssertTrue(overlay.isExpanded)
+        XCTAssertFalse(model.panelVisible)
+        overlay.toggleExpanded()
+        XCTAssertFalse(overlay.isExpanded)
+        model.observeQuest(.heroPowerUses, total: 3, matchID: "game", isLocalPlayer: true)
+        try await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertEqual(overlay.rows.first?.total, 12)
+        XCTAssertFalse(overlay.isExpanded)
+
+        overlay.toggleExpanded()
         model.endMatch()
         try await Task.sleep(nanoseconds: 50_000_000)
         XCTAssertFalse(overlay.isShown)
@@ -459,6 +690,17 @@ final class AccountProgressLifecycleTests: XCTestCase {
         await idle(model)
         overlay.update()
         XCTAssertFalse(overlay.isShown)
+    }
+
+    func testRootOverlayLoadsAsNonactivatingPanelBeforeBeingShown() throws {
+        let controller = RootOverlayWindow(windowNibName: "RootOverlayWindow")
+        let panel = try XCTUnwrap(controller.window as? NSPanel)
+        defer { panel.close() }
+        XCTAssertTrue(panel.styleMask.contains(.nonactivatingPanel))
+        XCTAssertTrue(panel.becomesKeyOnlyIfNeeded)
+        XCTAssertFalse(panel.hidesOnDeactivate)
+        XCTAssertTrue(panel.ignoresMouseEvents)
+        XCTAssertTrue(controller.alwaysLocked)
     }
 
     private func makeOverlayModel() -> AccountProgressModel {
@@ -491,7 +733,9 @@ final class AccountProgressLifecycleTests: XCTestCase {
         await idle(model)
         model.observeQuest(.heroPowerUses, total: 1, matchID: "game", isLocalPlayer: true)
         model.observeQuest(.manaSpent, total: 15, matchID: "game", isLocalPlayer: true)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: true)
+        let overlay = AccountQuestOverlayViewModel(model: model)
+        overlay.toggleExpanded()
+        XCTAssertTrue(overlay.isExpanded)
         let frame = CGRect(x: 0, y: 0, width: 1920, height: 1080)
         let view = NSHostingView(rootView: AccountQuestOverlayView(viewModel: overlay,
             placement: overlay.placement, canvasWidth: frame.width, canvasSize: frame.size, isLocked: true)
@@ -529,7 +773,7 @@ final class AccountProgressLifecycleTests: XCTestCase {
         experience.xpDisplay = "385/1325"
         experience.levelDisplay = "102"
         experience.percentage = 385.0 / 1325
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: true, experience: experience)
+        let overlay = AccountQuestOverlayViewModel(model: model, experience: experience)
         overlay.toggleMenu()
         await idle(model)
         XCTAssertTrue(overlay.menuExpanded)
@@ -577,7 +821,7 @@ final class AccountProgressLifecycleTests: XCTestCase {
             overlayEnabled: true, showTraditionalQuests: true, showBattlegroundsQuests: true, reader: { _ in ("fixture", AccountProgressReading(snapshot: snapshot, inGame: [:])) })
         model.refresh(full: true)
         await idle(model)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false)
+        let overlay = AccountQuestOverlayViewModel(model: model)
         XCTAssertEqual(overlay.rows.count, 7)
         XCTAssertGreaterThan(overlay.rows[0].displayHeight, AccountQuestOverlayLayout.rowHeight)
         let frame = CGRect(x: 0, y: 0, width: AccountQuestOverlayLayout.panelWidth, height: 650)

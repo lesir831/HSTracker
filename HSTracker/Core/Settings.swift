@@ -410,6 +410,8 @@ final class Settings {
     // and ArenasmithPreLobbyTrialsCollapsed).
     @UserDefault(key: Settings.enable_arenasmith_overlay, defaultValue: true)
     static var enableArenasmithOverlay: Bool
+    @UserDefault(key: Settings.show_heartharena_scores, defaultValue: true)
+    static var showHearthArenaScores: Bool
     @UserDefault(key: Settings.show_arena_hero_picking, defaultValue: true)
     static var showArenaHeroPicking: Bool
     @UserDefault(key: Settings.show_arenasmith_score, defaultValue: true)
@@ -667,8 +669,6 @@ final class Settings {
     static var accountQuestShowTraditional: Bool
     @UserDefault(key: Settings.account_quest_show_battlegrounds, defaultValue: false)
     static var accountQuestShowBattlegrounds: Bool
-    @UserDefault(key: Settings.account_quest_overlay_pinned, defaultValue: false)
-    static var accountQuestOverlayPinned: Bool
     @UserDefault(key: Settings.account_quest_overlay_horizontal, defaultValue: 99.0)
     static var accountQuestOverlayHorizontal: Double
     @UserDefault(key: Settings.account_quest_overlay_vertical, defaultValue: 93.0)
@@ -979,6 +979,7 @@ extension Settings {
     static let always_show_tier_7 = "always_show_tier_7"
     static let auto_show_battlegrounds_trinket_picking = "auto_show_battlegrounds_trinket_picking"
     static let enable_arenasmith_overlay = "enable_arenasmith_overlay"
+    static let show_heartharena_scores = "show_heartharena_scores"
     static let show_arena_hero_picking = "show_arena_hero_picking"
     static let show_arenasmith_score = "show_arenasmith_score"
     static let show_arena_related_cards = "show_arena_related_cards"
@@ -1064,7 +1065,6 @@ extension Settings {
     static let account_quest_overlay_enabled = "account_quest_overlay_enabled"
     static let account_quest_show_traditional = "account_quest_show_traditional"
     static let account_quest_show_battlegrounds = "account_quest_show_battlegrounds"
-    static let account_quest_overlay_pinned = "account_quest_overlay_pinned"
     static let account_quest_overlay_horizontal = "account_quest_overlay_horizontal"
     static let account_quest_overlay_vertical = "account_quest_overlay_vertical"
     static let player_counters_vertical = "player_counters_vertical"

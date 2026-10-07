@@ -23,6 +23,10 @@ struct TagChangeActions {
             logger.debug("Tag change of reward: \(id): \(prevValue) -> \(value)")
         }
         return {
+            if let game = eventHandler as? Game {
+                game.updateAccountQuestEstimate(tag: tag, entityID: id, value: value,
+                                               previous: prevValue, block: self.powerGameStateParser?.currentBlock)
+            }
             switch tag {
             case .zone: 
                 self.zoneChange(eventHandler: eventHandler, id: id, value: value, prevValue: prevValue)
@@ -142,7 +146,6 @@ struct TagChangeActions {
             }
             if let game = eventHandler as? Game {
                 game.counterManager.handleTagChange(tag: tag, id: id, value: value, prevValue: prevValue)
-                game.updateAccountQuestEstimate(tag: tag, entityID: id, value: value)
             }
         }
     }

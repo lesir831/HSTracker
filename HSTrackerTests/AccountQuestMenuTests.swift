@@ -91,7 +91,7 @@ final class AccountQuestMenuTests: XCTestCase {
             for experienceArrivesFirst in [false, true] {
                 let model = makeModel(Source(success()))
                 let experience = ExperienceCounterViewModel()
-                let overlay = AccountQuestOverlayViewModel(model: model, pinned: false, experience: experience)
+                let overlay = AccountQuestOverlayViewModel(model: model, experience: experience)
                 let hub = Game.ExperienceScene(loggedMode: loggedMode, stableMode: .hub,
                                                isInMenu: true, gameEnded: true)
                 if experienceArrivesFirst {
@@ -172,7 +172,7 @@ final class AccountQuestMenuTests: XCTestCase {
     func testColdStartRespectsExperienceCounterSetting() async {
         let model = makeModel(Source(success()))
         let experience = ExperienceCounterViewModel()
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false, experience: experience)
+        let overlay = AccountQuestOverlayViewModel(model: model, experience: experience)
         let scene = Game.ExperienceScene(loggedMode: .invalid, stableMode: .hub,
                                          isInMenu: true, gameEnded: true)
         scene.bootstrapMenu(model: model, counter: experience, enabled: false)
@@ -188,7 +188,7 @@ final class AccountQuestMenuTests: XCTestCase {
         let model = makeModel(source, overlayEnabled: false)
         let experience = visibleExperience()
         model.setMenuActive(true)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false, experience: experience)
+        let overlay = AccountQuestOverlayViewModel(model: model, experience: experience)
         await idle(model)
         XCTAssertFalse(overlay.menuAvailable)
         overlay.toggleMenu()
@@ -220,7 +220,7 @@ final class AccountQuestMenuTests: XCTestCase {
         model.setMenuActive(true)
         model.refresh(full: true)
         await idle(model)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false, experience: experience)
+        let overlay = AccountQuestOverlayViewModel(model: model, experience: experience)
         XCTAssertEqual(overlay.rows.first?.confirmed, 176)
         XCTAssertFalse(overlay.menuExpanded)
         let previousCount = source.recordedRequests.count
@@ -249,7 +249,7 @@ final class AccountQuestMenuTests: XCTestCase {
         let model = makeCategoryModel(source)
         let experience = visibleExperience()
         model.setMenuActive(true)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false, experience: experience)
+        let overlay = AccountQuestOverlayViewModel(model: model, experience: experience)
         overlay.toggleMenu()
         await idle(model)
         XCTAssertTrue(overlay.menuExpanded)
@@ -304,9 +304,11 @@ final class AccountQuestMenuTests: XCTestCase {
     func testMatchCategoryChangesKeepHiddenEstimatesAndNeverRefreshAccountData() async throws {
         let source = Source(categorySuccess())
         let model = makeCategoryModel(source)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: true)
+        let overlay = AccountQuestOverlayViewModel(model: model)
         model.beginMatch("category-match", spectator: false, questEligible: true)
         await idle(model)
+        XCTAssertFalse(overlay.isExpanded)
+        overlay.toggleExpanded()
         model.observeQuest(.manaSpent, total: 7, matchID: "category-match", isLocalPlayer: true)
         await idle(model)
         let original = try XCTUnwrap(model.session.snapshot)
@@ -332,7 +334,7 @@ final class AccountQuestMenuTests: XCTestCase {
         await idle(model)
         XCTAssertEqual(overlay.rows.map(\.id), [1035, 7007, 9999])
         XCTAssertTrue(overlay.isShown)
-        XCTAssertTrue(overlay.isExpanded)
+        XCTAssertFalse(overlay.isExpanded)
         XCTAssertEqual(overlay.rows.first?.confirmed, 176)
         XCTAssertEqual(overlay.rows.first?.estimatedDelta, 13)
         XCTAssertEqual(overlay.rows.first?.total, 189)
@@ -343,16 +345,23 @@ final class AccountQuestMenuTests: XCTestCase {
         XCTAssertEqual(model.session.snapshot?.capturedAt, original.capturedAt)
     }
 
-    func testPinnedMatchOverlayDoesNotAutomaticallyExpandMenu() async {
+    func testLegacyPinnedPreferenceCannotAutomaticallyExpandMatchOrMenu() async {
+        let key = "account_quest_overlay_pinned"
+        let defaults = UserDefaults.standard
+        let previous = defaults.object(forKey: key)
+        defaults.set(true, forKey: key)
+        defer {
+            if let previous { defaults.set(previous, forKey: key) }
+            else { defaults.removeObject(forKey: key) }
+        }
         let source = Source(success())
         let model = makeModel(source)
         let experience = visibleExperience()
         model.setMenuActive(true)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: true, experience: experience)
+        let overlay = AccountQuestOverlayViewModel(model: model, experience: experience)
         model.refresh(full: true)
         await idle(model)
         XCTAssertTrue(overlay.menuAvailable)
-        XCTAssertTrue(overlay.isPinned)
         XCTAssertFalse(overlay.menuExpanded)
 
         source.set(success(progress: 191))
@@ -364,6 +373,12 @@ final class AccountQuestMenuTests: XCTestCase {
         XCTAssertTrue(overlay.menuExpanded)
         overlay.toggleMenu()
         XCTAssertFalse(overlay.menuExpanded)
+
+        model.beginMatch("legacy-pinned", spectator: false, questEligible: true)
+        await idle(model)
+        XCTAssertTrue(overlay.isShown)
+        XCTAssertFalse(overlay.isExpanded)
+        XCTAssertFalse(overlay.menuExpanded)
     }
 
     func testHidingExperienceOrLeavingMenuClosesListWithoutReopeningIt() async {
@@ -371,7 +386,7 @@ final class AccountQuestMenuTests: XCTestCase {
         let model = makeModel(source)
         let experience = visibleExperience()
         model.setMenuActive(true)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false, experience: experience)
+        let overlay = AccountQuestOverlayViewModel(model: model, experience: experience)
         overlay.toggleMenu()
         await idle(model)
         XCTAssertTrue(overlay.menuExpanded)
@@ -409,7 +424,7 @@ final class AccountQuestMenuTests: XCTestCase {
         let model = makeModel(source)
         let experience = visibleExperience()
         model.setMenuActive(true)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false, experience: experience)
+        let overlay = AccountQuestOverlayViewModel(model: model, experience: experience)
         overlay.toggleMenu()
         await idle(model)
         XCTAssertTrue(overlay.menuExpanded)
@@ -442,7 +457,7 @@ final class AccountQuestMenuTests: XCTestCase {
         let model = makeModel(source)
         let experience = visibleExperience()
         model.setMenuActive(true)
-        let overlay = AccountQuestOverlayViewModel(model: model, pinned: false, experience: experience)
+        let overlay = AccountQuestOverlayViewModel(model: model, experience: experience)
         overlay.toggleMenu()
         await idle(model)
         XCTAssertTrue(overlay.menuAvailable)

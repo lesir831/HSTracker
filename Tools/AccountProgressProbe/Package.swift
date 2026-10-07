@@ -8,6 +8,6 @@ let package = Package(
     targets: [
         .target(name: "ProgressProbeCore"),
         .executableTarget(name: "ProgressProbe", dependencies: ["ProgressProbeCore"]),
-        .testTarget(name: "ProgressProbeCoreTests", dependencies: ["ProgressProbeCore"])
+        .testTarget(name: "ProgressProbeCoreTests", dependencies: ["ProgressProbeCore"], resources: [.copy("Fixtures")])
     ]
 )
