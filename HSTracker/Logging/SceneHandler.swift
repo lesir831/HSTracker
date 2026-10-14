@@ -22,7 +22,10 @@ class SceneHandler {
         transitioning = nil
     }
     
-    static func onSceneUpdate(prevMode: Mode, mode: Mode, sceneLoaded: Bool, transitioning: Bool) {
+    static func onSceneUpdate(prevMode: Mode, mode: Mode, sceneLoaded: Bool, transitioning: Bool, loadingScreenPhase: LoadingScreenPhase) {
+        // the loading screen keeps covering the loaded scene until it starts fading it in
+        let transitioning = transitioning || !(loadingScreenPhase == .invalid || loadingScreenPhase == .fadingIn)
+
         if SceneHandler.transitioning == nil || transitioning {
             onSceneTransitionStart(from: prevMode, to: mode)
             SceneHandler.transitioning = true
@@ -74,6 +77,7 @@ class SceneHandler {
                 overlay?.arenaPreDraft.reset()
             }
         } else if from == .gameplay {
+            BattlegroundsUtils.cancelAvailableRacesWaits()
             game.updateBattlegroundsSessionVisibility()
             Watchers.battlegroundsTeammateBoardStateWatcher.stop()
             Watchers.battlegroundsLobbyInfoWatcher.stop()
@@ -134,8 +138,11 @@ class SceneHandler {
             Watchers.playZoneWatcher.run()
         }
         
-        if from == .bacon {
-            game.windowManager.rootOverlay?.viewModel.tier7PreLobby.invalidateUserState()
+        if from == .bacon && to == .gameplay {
+            let tier7PreLobby = game.windowManager.rootOverlay?.viewModel.tier7PreLobby
+            DispatchQueue.main.async {
+                tier7PreLobby?.invalidateUserState()
+            }
         }
 
         if to == .draft {

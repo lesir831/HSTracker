@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import PromiseKit
 import SwiftyBeaver
 import Sentry
 
@@ -244,131 +243,104 @@ class BobsBuddyInvoker {
                     Thread.sleep(forTimeInterval: Double(LichKingDelay) / 1000.0)
                 }
             
-                _ = runAndDisplaySimulationAsync().catch({ error in
-                    logger.error("Error running simulation: \(error.localizedDescription)")
-                    BobsBuddyInvoker.bobsBuddyDisplay?.setErrorState(error: .failedToLoad)
-                    var inputString = ""
-                    if let input = self.input {
-                        inputString = input.unitestCopyableVersion()
-                    }
-                    Influx.sendEvent(eventName: "runSimulation failed", withProperties: [ "error": error.localizedDescription, "input": inputString ])
-                })
+                runAndDisplaySimulation()
             }
         }
     }
     
-    func maybeRunDuosPartialCombat() -> Promise<Bool> {
-        return Promise<Bool> { seal in
-            if input != nil && !(duosInputPlayerTeammate == nil || duosInputOpponentTeammate == nil) {
-                logger.debug("No need to run partial combat, all teammates found. Exiting.")
-                seal.fulfill(false)
-                return
-            }
-            if !shouldRun() {
-                seal.fulfill(false)
-                return
-            }
-            
-            if hasErrorState() {
-                seal.fulfill(false)
-                return
-            }
-            
-            MonoHelper.withMonoThread {
-                state = .combatPartial
-                logger.debug("Setting UI state to combat...")
-            
-                BobsBuddyInvoker.bobsBuddyDisplay?.setState(st: .combatPartial)
-                DispatchQueue.main.async {
-                    BobsBuddyInvoker.bobsBuddyDisplay?.resetText()
-                }
-            
-                // Enforce input teammate to be null if teammate was not snapshot
-                if input != nil && duosInputPlayerTeammate == nil {
-                    input?.playerTeammate = PlayerProxy(obj: nil)
-                }
-                if input != nil && duosInputOpponentTeammate == nil {
-                    input?.opponentTeammate = PlayerProxy(obj: nil)
-                }
-            
-                _ = runAndDisplaySimulationAsync().done { _ in
-                    seal.fulfill(true)
-                }.catch { error in
-                    logger.debug(error)
-                    seal.fulfill(false)
-                }
-            }
+    func maybeRunDuosPartialCombat() {
+        if input != nil && !(duosInputPlayerTeammate == nil || duosInputOpponentTeammate == nil) {
+            logger.debug("No need to run partial combat, all teammates found. Exiting.")
+            return
         }
-    }
-    
-    func runAndDisplaySimulationAsync() -> Promise<Bool> {
-        return Promise<Bool> { seal in
-            currentOpponentMinions.removeAll()
-            logger.debug("Running simulation...")
-            let startTime = Date()
+        if !shouldRun() {
+            return
+        }
+        
+        if hasErrorState() {
+            return
+        }
+        
+        MonoHelper.withMonoThread {
+            state = .combatPartial
+            logger.debug("Setting UI state to combat...")
+        
+            BobsBuddyInvoker.bobsBuddyDisplay?.setState(st: .combatPartial)
             DispatchQueue.main.async {
-                BobsBuddyInvoker.bobsBuddyDisplay?.hidePercentagesShowSpinners()
+                BobsBuddyInvoker.bobsBuddyDisplay?.resetText()
             }
-            _ = runSimulation().done { (result) in
-                guard let top = result, let input = self.input else {
-                    logger.debug("Simulation returned no result. Exiting")
-                    seal.fulfill(false)
-                    return
-                }
-                MonoHelper.withMonoThread {
-                    // extremely fast simulations otherwise make the spinner disappear quickly, making the result feel unreliable
-                    let remainingSpinTime = self.MinimumSpinTime - (Date().timeIntervalSince1970 - startTime.timeIntervalSince1970)
-                    if remainingSpinTime > 0 {
-                        Thread.sleep(forTimeInterval: remainingSpinTime)
-                    }
-                    // Add enum for exit conditions
-                    if top.simulationCount <= 500 && top.getMyExitCondition() ==  .time {
-                        logger.debug("Could not perform enough simulations. Displaying error state and exiting.")
-                        self.errorState = .notEnoughData
-                        BobsBuddyInvoker.bobsBuddyDisplay?.setErrorState(error: .notEnoughData)
-                    } else if self.state == .combatPartial {
-                        logger.debug("Displaying partial simulation results")
-                        let winRate = top.winRate
-                        let tieRate = top.tieRate
-                        let lossRate = top.lossRate
-                        let myDeathRate = top.myDeathRate
-                        let theirDeathRate = top.theirDeathRate
-                        let possibleResults = top.getResultDamage()
-                        let friendlyWon = self.duosInputPlayerTeammate == nil
-                        let playerCanDie = input.player.health <= input.damageCap
-                        let opponentCanDie = input.opponent.health <= input.damageCap
-                    
-                        DispatchQueue.main.async {
-                            BobsBuddyInvoker.bobsBuddyDisplay?.showPartialDuosSimulation(winRate: winRate, tieRate: tieRate, lossRate: lossRate, playerLethal: theirDeathRate, opponentLethal: myDeathRate, possibleResults: possibleResults, friendlyWon: friendlyWon, playerCanDie: playerCanDie, opponentCanDie: opponentCanDie)
-                        }
-                    } else {
-                        logger.debug("Displaying simulation results")
-                        let winRate = top.winRate
-                        let tieRate = top.tieRate
-                        let lossRate = top.lossRate
-                        let myDeathRate = top.myDeathRate
-                        let theirDeathRate = top.theirDeathRate
-                        let possibleResults = top.getResultDamage()
-                    
-                        DispatchQueue.main.async {
-                            BobsBuddyInvoker.bobsBuddyDisplay?.showCompletedSimulation(winRate: winRate, tieRate: tieRate, lossRate: lossRate, playerLethal: theirDeathRate, opponentLethal: myDeathRate, possibleResults: possibleResults)
-                        }
-                    }
-                    self.output = top
-                    seal.fulfill(true)
-                }
-            }.catch({ error in
-                logger.error("Error running simulation: \(error.localizedDescription)")
-                BobsBuddyInvoker.bobsBuddyDisplay?.setErrorState(error: .failedToLoad)
-                Influx.sendEvent(eventName: "runSimulation failed", withProperties: [ "error": error.localizedDescription])
-                seal.fulfill(false)
-            })
+        
+            // Enforce input teammate to be null if teammate was not snapshot
+            if input != nil && duosInputPlayerTeammate == nil {
+                input?.playerTeammate = PlayerProxy(obj: nil)
+            }
+            if input != nil && duosInputOpponentTeammate == nil {
+                input?.opponentTeammate = PlayerProxy(obj: nil)
+            }
+        
+            runAndDisplaySimulation()
         }
     }
     
-    func runSimulation() -> Promise<OutputProxy?> {
+    func runAndDisplaySimulation() {
+        currentOpponentMinions.removeAll()
+        logger.debug("Running simulation...")
+        let startTime = Date()
+        DispatchQueue.main.async {
+            BobsBuddyInvoker.bobsBuddyDisplay?.hidePercentagesShowSpinners()
+        }
+        Task {
+            guard let top = await runSimulation(), let input = self.input else {
+                logger.debug("Simulation returned no result. Exiting")
+                return
+            }
+            // extremely fast simulations otherwise make the spinner disappear quickly, making the result feel unreliable
+            let remainingSpinTime = self.MinimumSpinTime - Date().timeIntervalSince(startTime)
+            if remainingSpinTime > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(remainingSpinTime * 1_000_000_000))
+            }
+            MonoHelper.withMonoThread {
+                // Add enum for exit conditions
+                if top.simulationCount <= 500 && top.getMyExitCondition() ==  .time {
+                    logger.debug("Could not perform enough simulations. Displaying error state and exiting.")
+                    self.errorState = .notEnoughData
+                    BobsBuddyInvoker.bobsBuddyDisplay?.setErrorState(error: .notEnoughData)
+                } else if self.state == .combatPartial {
+                    logger.debug("Displaying partial simulation results")
+                    let winRate = top.winRate
+                    let tieRate = top.tieRate
+                    let lossRate = top.lossRate
+                    let myDeathRate = top.myDeathRate
+                    let theirDeathRate = top.theirDeathRate
+                    let possibleResults = top.getResultDamage()
+                    let friendlyWon = self.duosInputPlayerTeammate == nil
+                    let playerCanDie = input.player.health <= input.damageCap
+                    let opponentCanDie = input.opponent.health <= input.damageCap
+                
+                    DispatchQueue.main.async {
+                        BobsBuddyInvoker.bobsBuddyDisplay?.showPartialDuosSimulation(winRate: winRate, tieRate: tieRate, lossRate: lossRate, playerLethal: theirDeathRate, opponentLethal: myDeathRate, possibleResults: possibleResults, friendlyWon: friendlyWon, playerCanDie: playerCanDie, opponentCanDie: opponentCanDie)
+                    }
+                } else {
+                    logger.debug("Displaying simulation results")
+                    let winRate = top.winRate
+                    let tieRate = top.tieRate
+                    let lossRate = top.lossRate
+                    let myDeathRate = top.myDeathRate
+                    let theirDeathRate = top.theirDeathRate
+                    let possibleResults = top.getResultDamage()
+                
+                    DispatchQueue.main.async {
+                        BobsBuddyInvoker.bobsBuddyDisplay?.showCompletedSimulation(winRate: winRate, tieRate: tieRate, lossRate: lossRate, playerLethal: theirDeathRate, opponentLethal: myDeathRate, possibleResults: possibleResults)
+                    }
+                }
+                self.output = top
+            }
+        }
+    }
+    
+    func runSimulation() async -> OutputProxy? {
         logger.info("Starting simulation")
-        return Promise<OutputProxy?> { seal in
+        return await withCheckedContinuation { continuation in
             DispatchQueue.global().async {
                 var result: OutputProxy?
                 
@@ -512,7 +484,7 @@ class BobsBuddyInvoker {
                         logger.error("No input")
                     }
                 }
-                seal.fulfill(result)
+                continuation.resume(returning: result)
             }
         }
     }
@@ -788,7 +760,7 @@ class BobsBuddyInvoker {
         minion.maxAttack = Int32(entity[GameTag.atk])
         minion.maxHealth = Int32(entity[GameTag.health])
         minion.taunt = entity.has(tag: GameTag.taunt)
-        minion.div = entity.has(tag: GameTag.divine_shield)
+        minion.div = Int32(entity[.divine_shield])
         if cardIdsWithCleave.contains(cardId) {
             minion.cleave = true
         }
@@ -887,12 +859,38 @@ class BobsBuddyInvoker {
                     minion.attachEnchantment(enchantment: torethsBlessing)
                 }
             case CardIds.NonCollectible.Neutral.DrBoomsMonster_BoomingEnchantment:
-                let boomingModule = attachedEntities.first { e in e.cardId == CardIds.NonCollectible.Neutral.DrBoomsMonster_DrBoomsMonsterEnchantment }
+                let boomingModule = attachedEntities.first { e in e.cardId == CardIds.NonCollectible.Neutral.DrBoomsMonster_DrBoomsMonsterEnchantment
+                    || e.cardId == CardIds.NonCollectible.Neutral.DrBoomsMonster_DrBoomsMonster2 }
                 let booming = sim.enchantmentFactory.create(cardId: CardIds.NonCollectible.Neutral.DrBoomsMonster_BoomingEnchantment, controlledByPlayer: minion.controlledByPlayer)
                 if let boomingModule, booming.get() != nil {
                     booming.scriptDataNum1 = Int32(boomingModule[.tag_script_data_num_1])
                     booming.scriptDataNum2 = Int32(boomingModule[.tag_script_data_num_2])
                     minion.attachEnchantment(enchantment: booming)
+                }
+            case CardIds.NonCollectible.Neutral.BronzeTimepiece_PreservedInBronzeEnchantment:
+                // Bronze Timepiece trinket adds to a minion's existing Preserved in Bronze enchantment
+                // only when no stat-setting enchantment (tag 3224) was attached after it; otherwise the
+                // game creates a new one. Attach it only in the first case.
+                // When attached, this enchantment is necessary to resolve trigger resolution order
+                let lastPreservedInBronzeId = attachedEntities.filter { e in e.cardId == CardIds.NonCollectible.Neutral.BronzeTimepiece_PreservedInBronzeEnchantment }.map { e in e.id }.max() ?? attached.id
+                let statSetAfterIt = attachedEntities.any { e in e[.gametag_3224] > 0 && e.id > lastPreservedInBronzeId }
+                if attached.id != lastPreservedInBronzeId || statSetAfterIt {
+                    break
+                }
+                let preservedInBronze = sim.enchantmentFactory.create(cardId: CardIds.NonCollectible.Neutral.BronzeTimepiece_PreservedInBronzeEnchantment, controlledByPlayer: minion.controlledByPlayer)
+                if preservedInBronze.get() != nil {
+                    minion.attachEnchantment(enchantment: preservedInBronze)
+                }
+            case CardIds.NonCollectible.Neutral.TrainingCertificate_GraduatedEnchantment:
+                // A Graduated enchantment from a prior combat Training Certificate buff (typically Tarecgosa).
+                // When attached, this enchantment is necessary to resolve trigger resolution order
+                if let graduatedClass = GraduatedProxy._class,
+                   MonoList<MonoHandle>(minion.enchantments).contains(where: { e in MonoHelper.isInstance(obj: e, klass: graduatedClass) }) {
+                    break
+                }
+                let graduated = sim.enchantmentFactory.create(cardId: CardIds.NonCollectible.Neutral.TrainingCertificate_GraduatedEnchantment, controlledByPlayer: minion.controlledByPlayer)
+                if graduated.get() != nil {
+                    minion.attachEnchantment(enchantment: graduated)
                 }
             default:
                 if attached.card.type == .enchantment && !attached.cardId.isEmpty {
@@ -1116,9 +1114,16 @@ class BobsBuddyInvoker {
             return nil
         }
 
-        // Deliberately the base card id. A Deity is only ever Golden through Mask of
-        // Ancient Ones, which the sigil applies itself from the trinket.
         let deity = sim.minionFactory.createFromCardid(id: card.id, player: player)
+
+        // Mask of Ancient Ones sets bacon_evolution_card_id to the premium Deity dbf id,
+        // and it stays premium even after the trinket is gone (e.g., Buttons' Growing
+        // Collection is replaced by another hero power). HDT looks the id up in
+        // Cards.TripleToNormalCardIds, which HearthDb builds from the normal card's
+        // bacon_triple_upgrade_minion_id.
+        if isTriple(card) {
+            deity.golden = true
+        }
 
         // These are the Deity's current total stats, not a bonus on top of the printed
         // ones: they start at 1/1 when the sigil is created and grow with every "Give
@@ -1133,6 +1138,13 @@ class BobsBuddyInvoker {
         deity.maxHealth = health
 
         return deity
+    }
+
+    private static func isTriple(_ card: Card) -> Bool {
+        if card.baconTripledBaseMinionId > 0 {
+            return true
+        }
+        return Cards.cards.first { $0.baconTripleUpgradeMinionId == card.dbfId } != nil
     }
 
     static func getTrinketFromEntity(factory: TrinketFactoryProxy, player: Bool, entity: Entity) -> TrinketProxy {
@@ -1182,7 +1194,28 @@ class BobsBuddyInvoker {
             }
             
             // SupportedCards.VerifyCardIsSupported currently only works with TECH_LEVEL > 0.
-            // TODO: as this is implemented in BB and would require a call via Mono            
+            if entity.isMinion {
+                // Results other than "Supported" mean HSTracker knows the card, but BobsBuddy
+                // has not yet been updated for it.
+                let latestCardId = entity.info.latestCardId
+                let result = SupportedCardsProxy.verifyCardIsSupported(cardId: latestCardId)
+
+                // Unknown cards have two issues: 1) If they have effects they have not been implemented yet,
+                // and 2) even if they don't have effects, we would be unable to summon instances of the card
+                // with the correct stats during combat.
+                if result == .unknownCard {
+                    errorState = .unknownCards
+                    throw "Board has unknown cards. Exiting."
+                }
+
+                // For the most part we only care about text changes to cards if we previously had an implementation
+                // for a card. While there can in theory be edge cases where a card is changed in a way where the
+                // old text did not need an implementation, but the new text does, this seems very unlikely.
+                if result == .textChanged && simulator.minionFactory.hasImplementationFor(cardId: latestCardId) {
+                    errorState = .unknownCards
+                    throw "Board has cards with changed text. Exiting."
+                }
+            }
         }
         
         guard let playerGameHero else {
@@ -1477,7 +1510,8 @@ class BobsBuddyInvoker {
         
         inputPlayer.friendlyMinionsDeadLastCombatCounter = Int32(readPlayerCounter(.gametag_2717)) // direct or transfer
         
-        inputPlayer.battlecryCounter = Int32(readPlayerCounter(.gametag_3236)) // direct or transfer
+        // GameTag 3236 is Battlecries "played", whereas GameTag 3873 is Battlecries Triggered (correct one)
+        inputPlayer.battlecryCounter = Int32(readPlayerCounter(.gametag_3873)) // direct or transfer
         
         logger.info("pPirates=\(inputPlayer.piratesSummonCounter), pBeasts=\(inputPlayer.beastsSummonCounter), pDeadLastCombat=\(inputPlayer.friendlyMinionsDeadLastCombatCounter), pBattlecry=\(inputPlayer.battlecryCounter), friendly=\(friendly)")
         
@@ -1505,6 +1539,9 @@ class BobsBuddyInvoker {
         inputPlayer.tavernSpellCounter = Int32(readPlayerCounter(.gametag_3088)) // direct or transfer
         
         inputPlayer.deathrattleCounter = Int32(readPlayerCounter(.gametag_4639)) // direct or transfer
+
+        // Number of cards discarded
+        inputPlayer.discardCounter = Int32(readPlayerCounter(.gametag_4768)) // direct or transfer
 
         inputPlayer.volumizerAtkBuff = Int32(readPlayerCounter(.gametag_4468)) // direct or transfer
         inputPlayer.volumizerHealthBuff = Int32(readPlayerCounter(.gametag_4469)) // direct or transfer
@@ -1623,7 +1660,7 @@ class BobsBuddyInvoker {
                 errorState = .none
                 BobsBuddyInvoker.bobsBuddyDisplay?.setErrorState(error: .none, show: expandAfterError)
                 output = nil
-                _ = runAndDisplaySimulationAsync()
+                runAndDisplaySimulation()
             }
         } else {
             logger.debug("Input changed, but the simulation already re-ran ten times")
@@ -2060,6 +2097,95 @@ class BobsBuddyInvoker {
                     minion.minionUpdatedDuringCombat = true
                 }
             }
+
+            tryRerun()
+        }
+    }
+
+    /// Attaches a Dark Gift enchantment that was missing at combat setup to the minion holding
+    /// `sourceEntityId`, unless it already has one or copies deathrattles (whose revealed
+    /// enchantment may come from the copied minion instead).
+    private func attachMissingDarkGift(sourceEntityId: Int, cardId: String, enchantmentClass: OpaquePointer?, ignore: (MinionProxy) -> Bool = { _ in false }) {
+        guard let input, updateRevealedEntityValidStates, let enchantmentClass else {
+            return
+        }
+
+        MonoHelper.withMonoThread {
+            guard let minion = boardMinion(input, gameId: sourceEntityId) else {
+                return
+            }
+
+            // Do not proceed if the Dark Gift was already captured
+            if MonoList<MonoHandle>(minion.enchantments).contains(where: { e in MonoHelper.isInstance(obj: e, klass: enchantmentClass) }) {
+                return
+            }
+
+            if ignore(minion) {
+                return
+            }
+
+            if let copiesDeathrattles = ICopiesDeathrattlesProxy._class, MonoHelper.isInstance(obj: minion, klass: copiesDeathrattles) {
+                return
+            }
+
+            let enchantment = SimulatorProxy().enchantmentFactory.create(cardId: cardId, controlledByPlayer: minion.controlledByPlayer)
+            if enchantment.get() == nil {
+                return
+            }
+
+            enchantment.enchantmentUpdatedDuringCombat = true
+            minion.attachEnchantment(enchantment: enchantment)
+
+            tryRerun()
+        }
+    }
+
+    func updateGolemancyEnchantment(_ sourceEntityId: Int) {
+        attachMissingDarkGift(sourceEntityId: sourceEntityId, cardId: GolemancyProxy.cardId, enchantmentClass: GolemancyProxy._class) { minion in
+            // Ignore minions whose innate Deathrattle summons a Golem with the same enchantment
+            guard let darkParadox9 = DarkParadox9Proxy._class else {
+                return false
+            }
+            return MonoHelper.isInstance(obj: minion, klass: darkParadox9)
+        }
+    }
+
+    func updateOffensiveSacrificeEnchantment(_ sourceEntityId: Int) {
+        attachMissingDarkGift(sourceEntityId: sourceEntityId, cardId: CardIds.NonCollectible.Neutral.OffensiveSacrifice, enchantmentClass: OffensiveSacrificeProxy._class)
+    }
+
+    func updateDefensiveSacrificeEnchantment(_ sourceEntityId: Int) {
+        attachMissingDarkGift(sourceEntityId: sourceEntityId, cardId: CardIds.NonCollectible.Neutral.DefensiveSacrifice, enchantmentClass: DefensiveSacrificeProxy._class)
+    }
+
+    func updateSoulFermenterSavedMinions(_ trinketEntityId: Int, _ resummonedEntities: [Entity]) {
+        guard let input, updateRevealedEntityValidStates, let soulFermenterClass = SoulFermenterProxy._class else {
+            return
+        }
+
+        MonoHelper.withMonoThread {
+            let players = team(input, friendly: true) + team(input, friendly: false)
+            func soulFermenters(_ player: PlayerProxy) -> [TrinketProxy] {
+                return MonoList<TrinketProxy>(player.trinkets).filter { t in MonoHelper.isInstance(obj: t, klass: soulFermenterClass) }
+            }
+            guard let side = players.first(where: { p in soulFermenters(p).contains { t in t.game_id == trinketEntityId } }),
+                  let soulFermenter = soulFermenters(side).first(where: { t in t.game_id == trinketEntityId }),
+                  !soulFermenter.trinketUpdatedDuringCombat else {
+                return
+            }
+
+            // Each soul Fermenter accounts for up to 3 minions from THIS combat
+            let extraCount = resummonedEntities.count - 3 * soulFermenters(side).count
+            if extraCount <= 0 {
+                return
+            }
+
+            let simulator = SimulatorProxy()
+            let extraSavedMinions = SoulFermenterProxy(obj: soulFermenter.get()).extraSavedMinions
+            for savedEntity in resummonedEntities.prefix(extraCount) {
+                MonoHelper.addToList(list: extraSavedMinions, element: BobsBuddyInvoker.getMinionFromEntity(sim: simulator, player: soulFermenter.controlledByPlayer, entity: savedEntity, attachedEntities: []))
+            }
+            soulFermenter.trinketUpdatedDuringCombat = true
 
             tryRerun()
         }

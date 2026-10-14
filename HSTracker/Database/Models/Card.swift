@@ -47,6 +47,8 @@ final class Card {
     var costBlood = 0
     var costFrost = 0
     var costUnholy = 0
+    // GameTag.OLD_GOD - Black Empire's Old Gods (C'Thun, N'Zoth, Y'Shaarj, Yogg-Saron).
+    var isOldGod = false
     var name = "unknown"
     var enName = ""
     var playerClass: CardClass = .neutral
@@ -105,6 +107,8 @@ final class Card {
     // to, which is how a hero guide is resolved from the hero power Hearthstone
     // shows in its hero picking tooltip.
     var baconHeroPowerBaseHeroId = 0
+    // HERO_POWER - the dbf id of a hero's own hero power.
+    var heroPowerDbfId = 0
     var baconCard = false
 
     // SwiftUI identity for views that load this card's render once, from
@@ -461,6 +465,7 @@ extension Card: NSCopying {
         copy.costBlood = self.costBlood
         copy.costFrost = self.costFrost
         copy.costUnholy = self.costUnholy
+        copy.isOldGod = self.isOldGod
         copy.name = self.name
         copy.enName = self.enName
         copy.playerClass = self.playerClass
@@ -503,6 +508,7 @@ extension Card: NSCopying {
         copy.baconEvolutionCardId = self.baconEvolutionCardId
         copy.baconSubsetRaces = self.baconSubsetRaces
         copy.baconHeroPowerBaseHeroId = self.baconHeroPowerBaseHeroId
+        copy.heroPowerDbfId = self.heroPowerDbfId
         copy.faction = self.faction
         copy.spellSchool = self.spellSchool
         copy.tag4058 = self.tag4058

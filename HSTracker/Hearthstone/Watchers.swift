@@ -74,7 +74,7 @@ class Watchers {
             AppDelegate.instance().coreManager.game.queueEvents.handle(args)
         }
         sceneWatcher.change = { _, args in
-            SceneHandler.onSceneUpdate(prevMode: Mode.allCases[safeIndex: args.prevMode] ?? .invalid, mode: Mode.allCases[safeIndex: args.mode] ?? .invalid, sceneLoaded: args.sceneLoaded, transitioning: args.transitioning)
+            SceneHandler.onSceneUpdate(prevMode: Mode.allCases[safeIndex: args.prevMode] ?? .invalid, mode: Mode.allCases[safeIndex: args.mode] ?? .invalid, sceneLoaded: args.sceneLoaded, transitioning: args.transitioning, loadingScreenPhase: args.loadingScreenPhase)
         }
     }
     
@@ -270,6 +270,7 @@ class Watchers {
     
     private static func onBattlegroundsTeammateBoardStateChange(_ sender: BattlegroundsTeammateBoardStateWatcher, _ args: BattlegroundsTeammateBoardStateArgs) {
         AppDelegate.instance().coreManager.game.windowManager.rootOverlay?.viewModel.battlegroundsHeroPicking.isViewingTeammate = args.isViewingTeammate
+        AppDelegate.instance().coreManager.game.windowManager.rootOverlay?.viewModel.battlegroundsHeroPowerPicking.isViewingTeammate = args.isViewingTeammate
         // rest is not used
     }
     

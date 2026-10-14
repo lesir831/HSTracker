@@ -12,6 +12,7 @@ import AppKit
 // UserState/RefreshSubscriptionState are declared in Tier7PreLobbyViewModel.swift
 // and reused here as-is - same shape HDT's own widget reuses from its Tier7
 // equivalent.
+@MainActor
 class ConstructedMulliganPreLobbyWidgetViewModel: ObservableObject {
     @Published var visualsFormatType: VisualsFormatType = .vft_unknown {
         didSet {
@@ -30,16 +31,14 @@ class ConstructedMulliganPreLobbyWidgetViewModel: ObservableObject {
     @Published var isAuthenticated: Bool?
     @Published var username: String?
     @Published var refreshAccountEnabled = true
-    @Published var isCollapsed: Bool
+    @Published var isCollapsed = !Settings.showMulliganGuidePreLobby
     @Published var isOnboardingVisible = false
     @Published var showOnboardingNotification = false
     @Published private var possiblySubscribed = false
 
     private var _isUpdatingAccount = false
 
-    init() {
-        isCollapsed = !Settings.showMulliganGuidePreLobby
-    }
+    nonisolated init() {}
 
     var visibility: Bool {
         !(isModalOpen || isInQueue)
@@ -194,7 +193,7 @@ class ConstructedMulliganPreLobbyWidgetViewModel: ObservableObject {
                 self.refreshAccountEnabled = false
                 self.invalidateUserState()
             }
-            async let accountUpdate: GetAccountResult = HSReplayAPI.getAccountAsync()
+            async let accountUpdate: GetAccountResult = HSReplayAPI.getAccount()
             async let delay: Void = { try? await Task.sleep(nanoseconds: 3_000_000_000) }()
             _ = await (accountUpdate, delay)
             await self.update()
@@ -223,7 +222,7 @@ class ConstructedMulliganPreLobbyWidgetViewModel: ObservableObject {
         if HSReplayAPI.isFullyAuthenticated && HSReplayAPI.accountData != nil {
             if userState == .loading {
                 _isUpdatingAccount = true
-                _ = await HSReplayAPI.getAccountAsync()
+                _ = await HSReplayAPI.getAccount()
                 _isUpdatingAccount = false
             }
             isAuthenticated = true

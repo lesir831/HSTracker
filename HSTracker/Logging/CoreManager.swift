@@ -60,9 +60,15 @@ final class CoreManager: NSObject {
             NotificationManager.showNotification(type: .restartRequired)
         }
         
-        let logPath = MirrorHelper.getLogSessionDir()
-        logReaderManager = LogReaderManager(logPath: logPath, coreManager: self)
-        
+        // A placeholder until startTracking() creates the real one: it is never
+        // started, and its stop() is a no-op while not running. Reading the log
+        // directory here instead was the app's first mirror call whenever
+        // Hearthstone was already up, which set HearthMirror up on the main
+        // thread during launch and could hang it for a minute (Sentry
+        // HSTRACKER-MB, HSTRACKER-1Q3). With the game not running the path
+        // was already empty.
+        logReaderManager = LogReaderManager(logPath: "", coreManager: self)
+
         game.windowManager.rootOverlay?.viewModel.playerCounters.setCounters(game.counterManager)
         game.windowManager.rootOverlay?.viewModel.opponentCounters.setCounters(game.counterManager)
         game.windowManager.rootOverlay?.viewModel.playerActiveEffects.setActiveEffects(game.activeEffects)
@@ -268,53 +274,76 @@ final class CoreManager: NSObject {
             trackingStartPending = false
             return
         }
-        var retry = true
-        if CoreManager.isHearthstoneRunning() {
+        guard CoreManager.isHearthstoneRunning() else {
+            retryStartTracking(generation: generation)
+            return
+        }
 #if arch(arm64)
-            if #available(macOS 11.0, *) {
-                if let app = CoreManager.hearthstoneApp, app.executableArchitecture == NSBundleExecutableArchitectureX86_64 {
-                    let alert = NSAlert()
-                    logger.error("Hearthstone is running in 'X86-64' architecture")
-                    alert.messageText = "Nonoptimal version of Hearthstone"
-                    alert.informativeText = "HSTracker currently supports the native 'Apple Silicon' version of 'Hearthstone'.\n\nTo fix this, open your 'Applications' folder, right-click 'Hearthstone', and select 'Get Info'. Uncheck the box for 'Open using Rosetta', then restart the game."
-                    alert.alertStyle = .critical
-                    alert.runModal()
-                    trackingStartPending = false
-                    return
-                }
-            }
-#endif
-
-            let logPath = MirrorHelper.getLogSessionDir()
-            if !logPath.isEmpty {
-                logger.info("Starting log reader with path \(logPath)")
-                // Never leave the previous manager running: two of them would
-                // process every log line twice and call into the shared
-                // watchers from two threads at once.
-                self.logReaderManager.stop(eraseLogFile: false)
-                self.logReaderManager = LogReaderManager(logPath: logPath, coreManager: self)
-                self.logReaderManager.start()
+        if #available(macOS 11.0, *) {
+            if let app = CoreManager.hearthstoneApp, app.executableArchitecture == NSBundleExecutableArchitectureX86_64 {
+                let alert = NSAlert()
+                logger.error("Hearthstone is running in 'X86-64' architecture")
+                alert.messageText = "Nonoptimal version of Hearthstone"
+                alert.informativeText = "HSTracker currently supports the native 'Apple Silicon' version of 'Hearthstone'.\n\nTo fix this, open your 'Applications' folder, right-click 'Hearthstone', and select 'Get Info'. Uncheck the box for 'Open using Rosetta', then restart the game."
+                alert.alertStyle = .critical
+                alert.runModal()
                 trackingStartPending = false
-                if game.currentRegion == .unknown {
-                    game.currentRegion = Helper.getCurrentRegion()
-                }
-                retry = false
-                Watchers.sceneWatcher.run()
-                _ = HSReplayAPI.getAccount().done { result in
-                    switch result {
-                    case .success(account: let account):
-                        logger.info("Retrieved account \(account.username) - \(account.battletag)")
-                    case .failed:
-                        logger.error("Failed to retrieve account")
-                    }
-                }
+                return
             }
         }
-        if retry {
-            let time = DispatchTime.now() + .seconds(1)
-            DispatchQueue.main.asyncAfter(deadline: time) {
-                self.internalStartTracking(generation: generation)
+#endif
+
+        // The first mirror call is also what sets HearthMirror up, and that
+        // can block for as long as it likes: acquiring the task port right
+        // waits on the system authorization prompt, and task_for_pid on a game
+        // that is still launching. On the main thread that froze the app for a
+        // minute or more (Sentry HSTRACKER-MN, HSTRACKER-MB, HSTRACKER-1PX), so
+        // the log directory is read off it and the rest picks up back on main.
+        DispatchQueue.global(qos: .userInitiated).async {
+            let logPath = MirrorHelper.getLogSessionDir()
+            DispatchQueue.main.async {
+                self.finishStartTracking(generation: generation, logPath: logPath)
             }
+        }
+    }
+
+    private func finishStartTracking(generation: Int, logPath: String) {
+        // stopTracking() may have run while the mirror was being read.
+        guard generation == trackingGeneration else {
+            logger.info("Start Tracking was cancelled, not starting log readers")
+            trackingStartPending = false
+            return
+        }
+        guard !logPath.isEmpty else {
+            retryStartTracking(generation: generation)
+            return
+        }
+        logger.info("Starting log reader with path \(logPath)")
+        // Never leave the previous manager running: two of them would
+        // process every log line twice and call into the shared
+        // watchers from two threads at once.
+        self.logReaderManager.stop(eraseLogFile: false)
+        self.logReaderManager = LogReaderManager(logPath: logPath, coreManager: self)
+        self.logReaderManager.start()
+        trackingStartPending = false
+        if game.currentRegion == .unknown {
+            game.currentRegion = Helper.getCurrentRegion()
+        }
+        Watchers.sceneWatcher.run()
+        Task { @MainActor in
+            switch await HSReplayAPI.getAccount() {
+            case .success(account: let account):
+                logger.info("Retrieved account \(account.username) - \(account.battletag)")
+            case .failed:
+                logger.error("Failed to retrieve account")
+            }
+        }
+    }
+
+    private func retryStartTracking(generation: Int) {
+        let time = DispatchTime.now() + .seconds(1)
+        DispatchQueue.main.asyncAfter(deadline: time) {
+            self.internalStartTracking(generation: generation)
         }
     }
 
@@ -353,10 +382,10 @@ final class CoreManager: NSObject {
         wm.rootOverlay?.viewModel.battlegroundsHeroPicking.reset()
         wm.rootOverlay?.viewModel.battlegroundsQuestPicking.reset()
         wm.rootOverlay?.viewModel.battlegroundsTrinketPicking.reset()
+        wm.rootOverlay?.viewModel.battlegroundsHeroPowerPicking.reset()
         wm.rootOverlay?.viewModel.mulliganGuidePreLobby.viewModel.reset()
         wm.rootOverlay?.viewModel.mulliganGuide.reset()
         wm.rootOverlay?.viewModel.mulliganGuideV2.reset()
-        wm.rootOverlay?.viewModel.constructedMulliganPreLobbyWidget.reset()
         wm.rootOverlay?.viewModel.mulliganGuideTrialsExhausted.isShown = false
         MulliganGuideTrial.clear()
         // HDT clears both trials side by side when Hearthstone exits
@@ -367,6 +396,7 @@ final class CoreManager: NSObject {
         Tier7Trial.clear()
         DispatchQueue.main.async {
             wm.rootOverlay?.viewModel.battlegroundsSession.setShown(false)
+            wm.rootOverlay?.viewModel.constructedMulliganPreLobbyWidget.reset()
             if let tier7PreLobby = wm.rootOverlay?.viewModel.tier7PreLobby, tier7PreLobby.isShown {
                 tier7PreLobby.isShown = false
                 tier7PreLobby.reset()

@@ -20,6 +20,18 @@ import SwiftUI
 // That is why the two columns are exposed as generic A/B label+value pairs
 // rather than HDT's BgRatingStart/BgRatingCurrent.
 class BattlegroundsSessionViewModel: ObservableObject {
+    private var accountObservers = [NSObjectProtocol]()
+
+    init() {
+        for event in [Events.hsreplay_account_data_updated, Events.hsreplay_logged_out] {
+            accountObservers.append(NotificationCenter.default.addObserver(forName: Notification.Name(rawValue: event), object: nil, queue: nil) { [weak self] _ in
+                Task {
+                    await self?.updateCompositionStatsVisibility()
+                }
+            })
+        }
+    }
+
     // MARK: - Minion types
 
     @Published var availableMinionTypes = [Race]()
@@ -266,10 +278,14 @@ class BattlegroundsSessionViewModel: ObservableObject {
             await updateCompositionStatsIfNeeded()
         }
 
-        let firstGame = updateLatestGames()
+        let sessionGames = updateLatestGames()
+        let firstGame = sessionGames.first
 
         let game = AppDelegate.instance().coreManager.game
-        var rating = BattlegroundsSessionViewModel.clientRating(ratingInfo: game.battlegroundsRatingInfo, duos: isDuos) ?? 0
+        var rating = BattlegroundsSessionViewModel.currentRating(
+            clientRating: BattlegroundsSessionViewModel.clientRating(ratingInfo: game.battlegroundsRatingInfo, duos: isDuos),
+            clientRatingCachedAt: game.battlegroundsRatingInfoCachedAt,
+            lastGame: sessionGames.last) ?? 0
         // A game the season reset during starts the session from 0 rather than from the rating it began with
         let ratingStart = firstGame.map { $0.seasonReset ? 0 : $0.rating } ?? rating
         // The client has no rating for us yet - HearthMirror has not read one, or this is the Duos
@@ -298,8 +314,40 @@ class BattlegroundsSessionViewModel: ObservableObject {
     // HDT's UpdateMinionTypes.
     private func updateMinionTypes() {
         let game = AppDelegate.instance().coreManager.game
+        let availableRaces = game.availableRaces
+        setMinionTypes(availableRaces)
+        if availableRaces == nil && game.isBattlegroundsMatch() && !game.isInMenu {
+            Task {
+                await setMinionTypesOnceReadable()
+            }
+        }
+    }
+
+    private func setMinionTypesOnceReadable() async {
+        do {
+            if try await BattlegroundsUtils.waitForAvailableRaces() == nil {
+                return
+            }
+        } catch {
+            return
+        }
+
+        let game = AppDelegate.instance().coreManager.game
+        // the match is over, so leave the recap to the menu's own updates
+        if game.isInMenu {
+            return
+        }
+
+        // read again rather than use the result, so a newer game only ever gets its own races
+        await MainActor.run {
+            setMinionTypes(game.availableRaces)
+        }
+    }
+
+    private func setMinionTypes(_ races: [Race]?) {
+        let game = AppDelegate.instance().coreManager.game
         let allRaces = Database.battlegroundRaces.filter { $0 != .invalid && $0 != .all }
-        let availableRaces = game.availableRaces ?? allRaces
+        let availableRaces = races ?? allRaces
         let unavailableRaces = allRaces.filter { !availableRaces.contains($0) }
 
         let validMinionTypes = unavailableRaces.count >= 5 && unavailableRaces.count != allRaces.count
@@ -308,7 +356,7 @@ class BattlegroundsSessionViewModel: ObservableObject {
             bannedMinionTypes = unavailableRaces.sorted { BattlegroundsMinionType.raceName($0) < BattlegroundsMinionType.raceName($1) }
         }
 
-        if (game.currentMode == .gameplay || SceneHandler.scene == .gameplay) && validMinionTypes {
+        if game.currentMode == .gameplay && SceneHandler.scene == .gameplay && validMinionTypes {
             minionTypesBodyVisible = true
             minionTypesWaitingMsgVisible = false
         } else {
@@ -353,11 +401,15 @@ class BattlegroundsSessionViewModel: ObservableObject {
     }
 
     private func getBattlegroundsCompStats() async throws -> BattlegroundsCompStats? {
-        if isDuos {
+        let game = AppDelegate.instance().coreManager.game
+
+        if !game.isBattlegroundsMatch() {
             return nil
         }
 
-        let game = AppDelegate.instance().coreManager.game
+        if isDuos {
+            return nil
+        }
 
         if game.spectator {
             return nil
@@ -372,37 +424,27 @@ class BattlegroundsSessionViewModel: ObservableObject {
             return nil
         }
 
-        let userOwnsTier7 = HSReplayAPI.accountData?.is_tier7 ?? false
-
-        var counter = 0
-        while game.availableRaces == nil && counter < 5 {
-            await Task.sleep(milliseconds: 500)
-            counter += 1
+        if !Tier7Trial.isAvailable {
+            return nil
         }
-        guard let availableRaces = game.availableRaces else {
+
+        guard let availableRaces = try await BattlegroundsUtils.waitForAvailableRaces() else {
             throw CompositionStatsException("Unable to get available races")
         }
 
-        let compParams = BattlegroundsCompStatsParams(minion_types: availableRaces.compactMap { x in Race.allCases.firstIndex(of: x) }, game_language: Settings.hearthstoneLanguage?.rawValue ?? "enUS")
+        let compParams = BattlegroundsCompStatsParams(minion_types: availableRaces.compactMap { x in Race.allCases.firstIndex(of: x) }, deity_dbf_id: BattlegroundsUtils.getBattlegroundsDeityDbfId(game: game.gameEntity), game_language: Settings.hearthstoneLanguage?.rawValue ?? "enUS")
 
-        var token: String?
-
-        if !userOwnsTier7 {
-            let acc = MirrorHelper.getAccountId()
-
-            if let acc {
-                token = await Tier7Trial.activate(hi: acc.hi.int64Value, lo: acc.lo.int64Value)
-
-                if token == nil {
-                    throw CompositionStatsException("Unable to get trial token")
-                }
+        guard let access = await Tier7Trial.getAccess() else {
+            if (game.gameEntity?[.step] ?? 0) > Step.begin_mulligan.rawValue {
+                return nil
             }
+            throw CompositionStatsException("Unable to start Tier7 trial")
         }
 
         // At this point the user either owns tier7 or has an active trial!
 
         var compStats: BattlegroundsCompStats?
-        if let token {
+        if let token = access.trialToken {
             compStats = await HSReplayAPI.getTier7CompStats(token: token, parameters: compParams)
         } else {
             compStats = await HSReplayAPI.getTier7CompStats(parameters: compParams)
@@ -415,9 +457,12 @@ class BattlegroundsSessionViewModel: ObservableObject {
         return compStats
     }
 
+    private var compStatsFailed = false
+
     @MainActor
     private func clearCompositionStats() {
         compositionStats = nil
+        compStatsFailed = false
         compStatsBodyVisible = false
         compStatsWaitingMsgVisible = true
         compStatsErrorVisible = false
@@ -433,25 +478,39 @@ class BattlegroundsSessionViewModel: ObservableObject {
     private func updateCompositionStatsIfNeeded() async {
         let game = AppDelegate.instance().coreManager.game
 
-        if game.currentMode != .gameplay || SceneHandler.scene != .gameplay {
+        if game.currentMode != .gameplay {
             await clearCompositionStats()
             return
         }
 
-        // Ensures data was already fetched and no more API calls are needed
-        if ((compositionStats != nil && compositionStats?.count != 0) || compStatsErrorVisible) && (game.currentMode == .gameplay || SceneHandler.scene == .gameplay) {
-            return
+        // fetch while the loading screen still covers the game, so the stats are ready when it fades in
+        if !(compositionStats?.isEmpty == false) && !compStatsFailed {
+            await trySetCompStats()
         }
 
-        await trySetCompStats()
+        if SceneHandler.scene == .gameplay {
+            await revealCompositionStats()
+        }
+    }
+
+    @MainActor
+    private func revealCompositionStats() {
+        if compStatsFailed {
+            compStatsErrorVisible = true
+            compStatsBodyVisible = false
+            compStatsWaitingMsgVisible = false
+        } else if compositionStats != nil {
+            showCompositionStats()
+        }
     }
 
     private func trySetCompStats() async {
         do {
             if let compStats = try await getBattlegroundsCompStats() {
                 await setBattlegroundsCompositionStatsViewModel(compStats.data.first_place_comps_lobby_races)
-                await showCompositionStats()
             }
+        } catch is CancellationError {
+            return
         } catch {
             await handleCompStatsError(error)
         }
@@ -479,20 +538,18 @@ class BattlegroundsSessionViewModel: ObservableObject {
             }
         }
 
-        compStatsErrorVisible = true
-        compStatsBodyVisible = false
-        compStatsWaitingMsgVisible = false
+        compStatsFailed = true
     }
 
     // MARK: - Latest games
 
-    private func updateLatestGames() -> BattlegroundsLastGames.GameItem? {
+    private func updateLatestGames() -> [BattlegroundsLastGames.GameItem] {
         let duos = isDuos
         let ratingInfo = AppDelegate.instance().coreManager.game.battlegroundsRatingInfo
         let sortedGames = BattlegroundsLastGames.instance.getPlayerGames(duos: duos).sorted(by: { (a, b) in a.startTime < b.startTime })
         deleteOldGames(games: sortedGames)
-        var games = getSessionGames(sortedGames: sortedGames, ratingInfo: ratingInfo, duos: duos)
-        let firstGame = games.first
+        let allSessionGames = getSessionGames(sortedGames: sortedGames, ratingInfo: ratingInfo, duos: duos)
+        var games = allSessionGames
         if games.count > 8 {
             games.removeSubrange(0 ..< games.count - 8)
         }
@@ -503,7 +560,16 @@ class BattlegroundsSessionViewModel: ObservableObject {
         gridHeaderVisible = !sessionGames.isEmpty
         gamesEmptyStateVisible = sessionGames.isEmpty
 
-        return firstGame
+        return allSessionGames
+    }
+
+    // the client rating is only re-read when entering the Battlegrounds menu, so a game that ended after that
+    // knows the newer rating
+    static func currentRating(clientRating: Int?, clientRatingCachedAt: Date?, lastGame: BattlegroundsLastGames.GameItem?) -> Int? {
+        if let lastGame, lastGame.ratingAfter > 0, clientRatingCachedAt == nil || lastGame.endTime > clientRatingCachedAt! {
+            return lastGame.ratingAfter
+        }
+        return clientRating
     }
 
     private static func clientRating(ratingInfo: MirrorBattlegroundRatingInfo?, duos: Bool) -> Int? {

@@ -125,14 +125,16 @@ class HSReplayPreferences: PreferencePaneController, PreferencePane {
             Settings.hsReplayOAuthToken = nil
             Settings.hsReplayUploadToken = nil
             Settings.hsReplayUsername = nil
+            HSReplayAPI.accountData = nil
             MixpanelEvents.resetAccount()
+            NotificationCenter.default.post(name: Notification.Name(rawValue: Events.hsreplay_logged_out), object: nil)
 
             updateStatus()
         } else {
             HSReplayAPI.oAuthAuthorize {
                 HSReplayAPI.linkMixpanelAccount()
-                _ = HSReplayAPI.getAccount().done { result in
-                    switch result {
+                Task { @MainActor in
+                    switch await HSReplayAPI.getAccount() {
                     case .failed:
                         logger.error("Failed to retrieve account data")
                     case .success(account: let data):

@@ -1,3 +1,38 @@
+# 3.7.0
+**Updated for Hearthstone 37.0.0**
+## New
+- Complete German translations (thanks @marcelgross90)
+- A dialog now explains why logging in to HSReplay.net failed, with a button to try again.
+## Hearthstone
+- Added counters for G'huun, C'Thun, Eye of the Empire, N'Zoth, Dream's End and Y'Shaarj, Titan Bane.
+- Added deck highlights, active effects and related cards for The Black Empire.
+- Fixed Lift Off, Gladiatorial Combat, Talanji of the Graves and Dirdra, Rebel Captain not highlighting cards in your deck.
+- Fixed a rare crash when hovering a card in your hand.
+## Battlegrounds
+- In collaboration with Jeef, Comp Guides now occasionally adjust their tier based on what exactly is available in your specific match. You will see a notice on the Comp Guide when this happens.
+- The Tier7 lobby panel now refreshes in the background instead of showing a loading spinner every time it reappears.
+## Bob's Buddy
+- Fixed a small remaining number of incorrect combat odds.
+
+# 3.6.14
+**Updated for Hearthstone 36.6.3**
+## Hearthstone
+- Fixed a bug that could cause HSReplay.net features to fail until logging in again.
+- Fixed hovering one of your cards, in hand or in the deck tracker, no longer highlighting the cards in your deck that it works with.
+## Battlegrounds
+- Added tiers, stats and armor when picking Sir Finley's hero power! (based on the hero's stats)
+- Changed the Hero Guides to match your current hero power(s) during the game.
+- Added the Rally icon to the Last Known Board tooltip.
+- Added custom graphics for Divine Shields that take more than 1 hit in the Last Known Board tooltip.
+- Made the Composition Stats consider the Deity of the match.
+- Fixed the MMR in the session widget briefly resetting at the end of a match.
+- Fixed the Latest Games showing a dash for MMR in certain situations.
+- Fixed Tier7 features occasionally not loading.
+- Fixed the pre-lobby screen not showing the Tier7 widget.
+- Fixed Aberrations occasionally showing the wrong Deity in the available minion types.
+## Bob's Buddy
+- Fixed a number of incorrect combat odds.
+
 # 3.6.13
 ## Hearthstone
 - Added a Counters settings pane for choosing, separately for you and your opponent, whether each counter is always shown, never shown or shown only when it is relevant.

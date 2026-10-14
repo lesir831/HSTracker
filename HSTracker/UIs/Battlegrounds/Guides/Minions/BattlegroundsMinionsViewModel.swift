@@ -171,7 +171,7 @@ final class BattlegroundsMinionsViewModel: ObservableObject {
 
     // Before a match there is no minion pool, only the assembled database.
     private var db: BattlegroundsDb {
-        isPreLobby ? BattlegroundsDbSingleton.instance : BattlegroundsDbSingleton.current
+        isPreLobby ? BattlegroundsDbSingleton.get(isDuos: isDuos) : BattlegroundsDbSingleton.current
     }
 
     // HDT's OnMinionPoolChanged: everything read off the database is computed,
@@ -181,6 +181,7 @@ final class BattlegroundsMinionsViewModel: ObservableObject {
     }
     private var settingsCancellable: AnyCancellable?
     private var trialCancellable: AnyCancellable?
+    private var dbUpdatedCancellable: AnyCancellable?
 
     // The three mid-match sources of a tier 7, owned here rather than read off
     // the AppKit tier overlay. Mirrors HDT's HasTier7HeroPower / HasTier7Trinket
@@ -201,6 +202,16 @@ final class BattlegroundsMinionsViewModel: ObservableObject {
     }
 
     init() {
+        dbUpdatedCancellable = NotificationCenter.default
+            .publisher(for: Notification.Name(rawValue: Events.battlegrounds_db_updated))
+            .receive(on: RunLoop.main)
+            .sink { [weak self] notification in
+                guard let self, let isDuos = notification.userInfo?["isDuos"] as? Bool else { return }
+                if self.isPreLobby && self.isDuos == isDuos {
+                    self.onMinionPoolChanged()
+                }
+            }
+
         settingsCancellable = NotificationCenter.default
             .publisher(for: UserDefaults.didChangeNotification)
             .receive(on: RunLoop.main)

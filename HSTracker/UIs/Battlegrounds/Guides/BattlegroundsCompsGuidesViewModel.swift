@@ -78,13 +78,7 @@ final class BattlegroundsCompsGuidesViewModel: ObservableObject {
         }
 
         updateLock.lock()
-        // No trial is activated here, so only an account that actually owns
-        // Tier7 gets the premium list.
-        if HSReplayAPI.accountData?.is_tier7 ?? false {
-            await setPremiumCompGuides(token: nil)
-        } else {
-            await setFreeCompGuides()
-        }
+        await trySetCompGuides()
         updateLock.unlock()
     }
 
@@ -137,50 +131,53 @@ final class BattlegroundsCompsGuidesViewModel: ObservableObject {
     }
 
     private func trySetCompGuides() async {
-        let userOwnsTier7 = HSReplayAPI.accountData?.is_tier7 ?? false
-        let token = Tier7Trial.token
+        if await MainActor.run(body: { isPreLobby }) {
+            // no trial is activated here, spending one before the player has
+            // even queued is not worth it
+            if HSReplayAPI.accountData?.is_tier7 ?? false {
+                // there is no minion pool before a match, so ask for the
+                // unfiltered list
+                await setPremiumCompGuides(token: nil, minionTypes: [], deityDbfId: nil)
+            } else {
+                await setFreeCompGuides()
+            }
+            return
+        }
 
-        if userOwnsTier7 || token != nil {
-            await setPremiumCompGuides(token: token)
+        if !Tier7Trial.isAvailable {
+            await setFreeCompGuides()
+            return
+        }
+
+        let races: [Race]?
+        do {
+            races = try await BattlegroundsUtils.waitForAvailableRaces()
+        } catch {
+            return
+        }
+        guard let races else {
+            logger.error("Unable to get available races")
+            await setError()
+            return
+        }
+
+        if let access = await Tier7Trial.getAccess() {
+            await setPremiumCompGuides(
+                token: access.trialToken,
+                minionTypes: races.compactMap { Race.allCases.firstIndex(of: $0) },
+                deityDbfId: BattlegroundsUtils.getBattlegroundsDeityDbfId(game: AppDelegate.instance().coreManager.game.gameEntity)
+            )
         } else {
             await setFreeCompGuides()
         }
     }
 
-    private func setPremiumCompGuides(token: String?) async {
-        let game = AppDelegate.instance().coreManager.game
+    private func setPremiumCompGuides(token: String?, minionTypes: [Int], deityDbfId: Int?) async {
         let gameLanguage = "\(Settings.hearthstoneLanguage ?? .enUS)"
-        let minionTypes: [Int]
-
-        if await MainActor.run(body: { isPreLobby }) {
-            // there is no minion pool before a match, so ask for the
-            // unfiltered list
-            minionTypes = []
-        } else {
-            // game.availableRaces reads live from a game-memory mirror and
-            // returns nil until that read settles - right at match start
-            // it's reliably nil for roughly a second, so checking it once
-            // here would error out on every first load (and only succeed on
-            // Retry, once the mirror had time to catch up). Poll briefly
-            // instead of failing on the first nil.
-            var races: [Race]?
-            for _ in 0..<10 {
-                if let r = game.availableRaces {
-                    races = r
-                    break
-                }
-                await Task.sleep(milliseconds: 300)
-            }
-            guard let races else {
-                await setError()
-                return
-            }
-            minionTypes = races.compactMap { Race.allCases.firstIndex(of: $0) }
-        }
 
         let data = token != nil
-            ? await HSReplayAPI.getTier7CompGuides(token: token, gameLanguage: gameLanguage, minionTypes: minionTypes)
-            : await HSReplayAPI.getTier7CompGuides(gameLanguage: gameLanguage, minionTypes: minionTypes)
+            ? await HSReplayAPI.getTier7CompGuides(token: token, gameLanguage: gameLanguage, minionTypes: minionTypes, deityDbfId: deityDbfId)
+            : await HSReplayAPI.getTier7CompGuides(gameLanguage: gameLanguage, minionTypes: minionTypes, deityDbfId: deityDbfId)
 
         guard let data else {
             await setError()
@@ -191,9 +188,20 @@ final class BattlegroundsCompsGuidesViewModel: ObservableObject {
             // updateState prefers compsByTier, so the free list has to go
             // before it is set
             self.comps = nil
-            self.compsByTier = data.by_tier.mapValues { guides in
-                guides.sorted(by: { $0.tier_rank < $1.tier_rank })
-                    .map { BattlegroundsCompGuideViewModel($0, isPreLobby: self.isPreLobby) }
+            let compsByAdjustedTier = Dictionary(grouping: data.by_tier.values.joined()) { comp in
+                comp.adjusted_tier ?? comp.tier
+            }
+            self.compsByTier = compsByAdjustedTier.mapValues { guides in
+                // demoted comps go to the top of their adjusted tier, promoted
+                // ones to the bottom
+                guides.sorted { a, b in
+                    let tier = a.adjusted_tier ?? a.tier
+                    let signA = (a.tier - tier).signum(), signB = (b.tier - tier).signum()
+                    if signA != signB { return signA < signB }
+                    if a.tier != b.tier { return a.tier < b.tier }
+                    return a.tier_rank < b.tier_rank
+                }
+                .map { BattlegroundsCompGuideViewModel($0, isPreLobby: self.isPreLobby) }
             }
             self.hasError = false
             self.updateState()

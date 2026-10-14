@@ -464,6 +464,7 @@ enum GameTag: Int, CaseIterable, Codable {
     // in Battlegrounds and never moves.
     bacon_max_gold = 3148,
     is_bacon_duos_exclusive = 3166,
+    gametag_3224 = 3224,
     tourist = 3228,
     gametag_3236 = 3236,
     current_excavate_tier = 3249,
@@ -501,7 +502,9 @@ enum GameTag: Int, CaseIterable, Codable {
     end_of_turn_trigger = 3744,
     demon_portal_deck = 3808,
     gametag_3809 = 3809,
+    gametag_3873 = 3873,
     bacon_locked_mulligan_hero = 3877,
+    additional_hero_power_index = 3919,
     rewind = 3934,
     gametag_3962 = 3962,
     tavern_spell_attack_increase = 3989,
@@ -529,6 +532,7 @@ enum GameTag: Int, CaseIterable, Codable {
     bacon_fodders_in_refresh = 4664,
     gametag_4696 = 4696,
     gametag_4741 = 4741,
+    gametag_4768 = 4768,
     gametag_4799 = 4799,
     gametag_4803 = 4803,
     hidden_script_data_4 = 4830,
@@ -547,7 +551,14 @@ enum GameTag: Int, CaseIterable, Codable {
     bacon_evolution_card_overwrite_health = 4907,
     bacon_old_god = 4744,
     bacon_old_god_attack = 4914,
-    bacon_old_god_health = 4915
+    bacon_old_god_health = 4915,
+    // Black Empire: the Old God card marker, and the four flags C'Thun, Eye of the
+    // Empire's counter tracks.
+    old_god = 4754,
+    cthun_ability1_used = 4527,
+    cthun_ability2_used = 4760,
+    cthun_ability3_used = 4769,
+    cthun_ability4_used = 4770
 
     static var lookup = [String: GameTag]()
     

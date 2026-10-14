@@ -92,9 +92,18 @@ class Game: NSObject, PowerEventHandler {
     var _mulliganGuideParams: MulliganGuideParams?
     var _mulliganV2Params: MulliganV2Params?
 
-    // Mulligan G-V2 (HDT) is Standard Ranked/Friendly only.
+    // HDT's IsMulliganGV2BrawlOverride: the remote config can turn the V2 guide
+    // on for Tavern Brawl, which is then asked about as if it were Ranked Standard.
+    var isMulliganGV2BrawlOverride: Bool {
+        currentGameType == .gt_tavernbrawl && (RemoteConfig.data?.mulligan_gv2?.enable_tavern_brawl ?? false)
+    }
+
+    // Mulligan G-V2 (HDT) is Standard Ranked/Friendly only (plus the brawl
+    // override) - Wild and the rest fall back to the V1 guide.
     var isV2Mulligan: Bool {
-        (currentGameType == .gt_ranked || currentGameType == .gt_vs_friend)
+        isMulliganGV2BrawlOverride
+            || (currentFormatType == .ft_standard
+                && (currentGameType == .gt_ranked || currentGameType == .gt_vs_friend))
     }
 
     private var mulliganLivePollingActive = false
@@ -143,19 +152,26 @@ class Game: NSObject, PowerEventHandler {
     func setHearthstoneActived(flag: Bool) {
         hearthstoneRunState.isActive = flag
         if currentMode == .bacon || isBattlegroundsMatch() {
-            if flag {
-                windowManager.rootOverlay?.viewModel.tier7PreLobby.onFocus()
+            if flag, let tier7PreLobby = windowManager.rootOverlay?.viewModel.tier7PreLobby {
+                DispatchQueue.main.async {
+                    tier7PreLobby.onFocus()
+                }
             }
             updateBattlegroundsSessionVisibility()
         }
-        if flag {
-            windowManager.rootOverlay?.viewModel.constructedMulliganPreLobbyWidget.onFocus()
+        if flag, let widgetVm = windowManager.rootOverlay?.viewModel.constructedMulliganPreLobbyWidget {
+            DispatchQueue.main.async {
+                widgetVm.onFocus()
+            }
         }
     }
 	
 	func setSelfActivated(flag: Bool) {
 		self.selfAppActive = flag
         self.updateTrackers()
+        if currentMode == .bacon || isBattlegroundsMatch() {
+            updateBattlegroundsSessionVisibility()
+        }
 	}
     
     func getBattlegroundsBoardStateFor(id: Int) -> BoardSnapshot? {
@@ -201,7 +217,14 @@ class Game: NSObject, PowerEventHandler {
         return gameEntity?[.bacon_buddy_enabled] ?? 0 > 0
     }
     
-    var battlegroundsLobbyInfo: MirrorBattlegroundsLobbyInfo?
+    private var _battlegroundsLobbyInfo: MirrorBattlegroundsLobbyInfo?
+
+    // Set from the BattlegroundsLobbyInfoWatcher thread and read by the log
+    // reader at game end; see battlegroundsStateLock.
+    var battlegroundsLobbyInfo: MirrorBattlegroundsLobbyInfo? {
+        get { battlegroundsStateLock.around { _battlegroundsLobbyInfo } }
+        set { battlegroundsStateLock.around { _battlegroundsLobbyInfo = newValue } }
+    }
 	
 	// MARK: - PowerEventHandler protocol
 	
@@ -250,7 +273,16 @@ class Game: NSObject, PowerEventHandler {
             // do not show gui while spectating
             !(Settings.dontTrackWhileSpectating && self.spectator) &&
                 // do not show gui while game is in background
-                !((Settings.hideAllWhenGameInBackground || Settings.hideAllWhenGameInBackground) && !self.hearthstoneRunState.isActive)
+                isGameInForeground
+    }
+
+    /// Whether the overlay should be up as far as hideAllWhenGameInBackground is
+    /// concerned. HSTracker itself being active counts as the game being in the
+    /// foreground: a click on the overlay can activate HSTracker, which sends
+    /// Hearthstone to the background, and hiding the overlay then would take it
+    /// down out from under the click.
+    var isGameInForeground: Bool {
+        !Settings.hideAllWhenGameInBackground || hearthstoneRunState.isActive || selfAppActive
     }
     
     var shouldShowTracker: Bool {
@@ -505,8 +537,7 @@ class Game: NSObject, PowerEventHandler {
 
             panel.reloadSettings()
             panel.isShown = Settings.showSecretHelper && !self.gameEnded &&
-                ((Settings.hideAllWhenGameInBackground && self.hearthstoneRunState.isActive)
-                    || !Settings.hideAllWhenGameInBackground) && !isBattlegroundsMatch()
+                self.isGameInForeground && !isBattlegroundsMatch()
         }
     }
     
@@ -595,9 +626,7 @@ class Game: NSObject, PowerEventHandler {
     func updateRootOverlay() {
         DispatchQueue.main.async { [self] in
             guard let win = windowManager.rootOverlay else { return }
-            let hsActive = hearthstoneRunState.isActive
-
-            if (Settings.hideAllWhenGameInBackground && hsActive) || !Settings.hideAllWhenGameInBackground {
+            if isGameInForeground {
                 let frame = SizeHelper.overHearthstoneFrame()
                 let isFullscreen = SizeHelper.hearthstoneWindow.isFullscreen()
                 let fullscreenChanged = rootOverlayLastFullscreenState != nil && rootOverlayLastFullscreenState != isFullscreen
@@ -685,8 +714,7 @@ class Game: NSObject, PowerEventHandler {
             let leftViaScene = SceneHandler.scene != nil && SceneHandler.scene != .gameplay
             let isBG = self.isBattlegroundsMatch() && !self.isInMenu && !leftViaScene && !self.gameEnded
             let show = isBG && Settings.showBobsBuddy &&
-                ((Settings.hideAllWhenGameInBackground && self.hearthstoneRunState.isActive)
-                    || !Settings.hideAllWhenGameInBackground) && !self.hideBobsBuddy
+                self.isGameInForeground && !self.hideBobsBuddy
             self.windowManager.rootOverlay?.viewModel.bobsBuddy.isShown = show
         }
     }
@@ -913,7 +941,7 @@ class Game: NSObject, PowerEventHandler {
                 return
             }
             let show = (!self.isMercenariesMatch() && Settings.showFlavorText) || (self.isMercenariesMatch())
-            if !self.isInMenu && show || (self.isMulliganDone() || self.isMercenariesMatch()) && !self.gameEnded && ((Settings.hideAllWhenGameInBackground && self.hearthstoneRunState.isActive) || !Settings.hideAllWhenGameInBackground) {
+            if !self.isInMenu && show || (self.isMulliganDone() || self.isMercenariesMatch()) && !self.gameEnded && self.isGameInForeground {
                 board.isShown = true
                 // OverlayWindow.IsGameOver, which collapses every slot
                 // rather than hiding the grids.
@@ -947,7 +975,7 @@ class Game: NSObject, PowerEventHandler {
     // OverlayWindow.IsContentVisible: the overlay is hidden while Hearthstone
     // is in the background, if the user asked for that.
     private var isBoardEntryOrderContentVisible: Bool {
-        !Settings.hideAllWhenGameInBackground || hearthstoneRunState.isActive
+        isGameInForeground
     }
 
     // HDT's OverlayWindow.OnPlayZoneStateChanged, fed by the PlayZoneWatcher
@@ -974,8 +1002,7 @@ class Game: NSObject, PowerEventHandler {
             // game to keep the button clear of Hearthstone's "Back" button.
             tasks.isInMenu = self.isInMenu
             let show = Settings.showMercsTasks && tasks.isRequested
-                && ((Settings.hideAllWhenGameInBackground && self.hearthstoneRunState.isActive)
-                    || !Settings.hideAllWhenGameInBackground)
+                && self.isGameInForeground
             tasks.isButtonShown = show
             if !show {
                 tasks.isListShown = false
@@ -999,11 +1026,17 @@ class Game: NSObject, PowerEventHandler {
         }
     }
         
+    // Called from the BaconWatcher thread. The @Published writes have to happen on
+    // main: setting them here deadlocked against main-thread writes to the same
+    // view model, each side holding the lock the other one wanted (HSTRACKER-2XR).
     func setBaconState(_ mode: SelectedBattlegroundsGameMode, _ isAnyOpen: Bool) {
-        windowManager.rootOverlay?.viewModel.tier7PreLobby.battlegroundsGameMode = mode
-        windowManager.rootOverlay?.viewModel.tier7PreLobby.isModalOpen = !queueEvents.isInQueue && isAnyOpen
+        let isModalOpen = !queueEvents.isInQueue && isAnyOpen
         windowManager.rootOverlay?.viewModel.battlegroundsSession.battlegroundsGameMode = mode
         DispatchQueue.main.async {
+            if let tier7PreLobby = self.windowManager.rootOverlay?.viewModel.tier7PreLobby {
+                tier7PreLobby.battlegroundsGameMode = mode
+                tier7PreLobby.isModalOpen = isModalOpen
+            }
             self.updateTier7PreLobbyVisibility()
             self.updateBattlegroundsGuidesPreLobbyVisibility()
         }
@@ -1022,6 +1055,13 @@ class Game: NSObject, PowerEventHandler {
             return
         }
 
+        // hiding the panel resets the game mode and the watcher only emits on change
+        if viewModel.battlegroundsGameMode == .unknown && isInMenu && SceneHandler.scene == .bacon {
+            let mode = MirrorHelper.getSelectedBattlegroundsGameMode()
+            viewModel.battlegroundsGameMode = mode
+            windowManager.rootOverlay?.viewModel.battlegroundsSession.battlegroundsGameMode = mode
+        }
+
         // Hearthstone being in the background isn't a term here, exactly as in
         // HDT: the whole RootOverlay window is hidden for that
         // (Game.updateRootOverlay), so folding it in would only make the panel
@@ -1038,12 +1078,12 @@ class Game: NSObject, PowerEventHandler {
             // shown -> hidden transition because that is the only time
             // OverlayElementBehavior.Hide() fires it - it early-returns when
             // the element is already collapsed - and this runs on every lobby
-            // tick. reset() clears battlegroundsGameMode along with the rest,
-            // as HDT's Reset() does; BaconWatcher re-supplies it on its next
-            // change (queueing blurs the lobby, so cancelling one always
-            // produces one), and re-entering BACON restarts the watcher with a
-            // cleared _prev so it reports unconditionally.
-            viewModel.reset()
+            // tick. softReset() clears battlegroundsGameMode, as HDT's
+            // SoftReset() does, but leaves the last state on screen so the
+            // panel refreshes silently the next time it is shown; the next
+            // call re-reads the mode from memory above, since BaconWatcher
+            // only reports changes.
+            viewModel.softReset()
         }
         viewModel.isShown = show
     }
@@ -1121,7 +1161,7 @@ class Game: NSObject, PowerEventHandler {
     }
 
     func updateBattlegroundsSessionVisibility(_ isFriendsListOpen: Bool = false) {
-        let show = isRunning && ((Settings.hideAllWhenGameInBackground && hearthstoneRunState.isActive) || !Settings.hideAllWhenGameInBackground) && Settings.showSessionRecap
+        let show = isRunning && isGameInForeground && Settings.showSessionRecap
                 && (
                     (
                         // Scene is not transitioning
@@ -1332,8 +1372,14 @@ class Game: NSObject, PowerEventHandler {
         return MirrorHelper.getMercenariesMapInfo()
     }
     
+    // The race caches and battlegroundsLobbyInfo are read from the log reader,
+    // the watchers, the main thread and detached tasks while reset() and the
+    // lobby info watcher replace them, so every access goes through this lock
+    // (Sentry HSTRACKER-33J, HSTRACKER-33P). The mirror read stays outside it.
+    private let battlegroundsStateLock = UnfairLock()
+
     private var _availableRaces: [Race]?
-    
+
     private var _unavailableRaces: [Race]?
     
     var adventureOpponentId: String?
@@ -1342,36 +1388,36 @@ class Game: NSObject, PowerEventHandler {
     var hideBattlegroundsTurn = false
     
     var availableRaces: [Race]? {
-        if _availableRaces == nil {
-            if let races = MirrorHelper.getAvailableBattlegroundsRaces() {
-                let newRaces = races.compactMap({ x in x.intValue > 0 ? Race.allCases[safeIndex: x.intValue] : nil })
-                logger.info("Battlegrounds available races: \(newRaces) - from mirror \(races)")
-                if newRaces.count > 0 && newRaces.count == races.count {
-                    _availableRaces = newRaces
-                    return _availableRaces
-                }
+        if let cached = battlegroundsStateLock.around({ _availableRaces }) {
+            return cached
+        }
+        if let races = MirrorHelper.getAvailableBattlegroundsRaces() {
+            let newRaces = races.compactMap({ x in x.intValue > 0 ? Race.allCases[safeIndex: x.intValue] : nil })
+            logger.info("Battlegrounds available races: \(newRaces) - from mirror \(races)")
+            if newRaces.count > 0 && newRaces.count == races.count {
+                battlegroundsStateLock.around { _availableRaces = newRaces }
+                return newRaces
             }
         }
-        return _availableRaces
+        return nil
     }
-    
+
     var unavailableRaces: [Race]? {
-        if _unavailableRaces == nil {
-            if let races = availableRaces, races.count > 0 && races[0] != .invalid {
-                var newRaces = [Race]()
-                for race in Database.battlegroundRaces where !races.contains(race) {
-                    newRaces.append(race)
-                }
-                if newRaces.count > 0 {
-                    logger.info("Battlegrounds unavailable races: \(newRaces) - all races \(races)")
-                    _unavailableRaces = newRaces
-                    return _unavailableRaces
-                } else {
-                    return nil
-                }
+        if let cached = battlegroundsStateLock.around({ _unavailableRaces }) {
+            return cached
+        }
+        if let races = availableRaces, races.count > 0 && races[0] != .invalid {
+            var newRaces = [Race]()
+            for race in Database.battlegroundRaces where !races.contains(race) {
+                newRaces.append(race)
+            }
+            if newRaces.count > 0 {
+                logger.info("Battlegrounds unavailable races: \(newRaces) - all races \(races)")
+                battlegroundsStateLock.around { _unavailableRaces = newRaces }
+                return newRaces
             }
         }
-        return _unavailableRaces
+        return nil
     }
 
     var battlegroundsRatingInfo: MirrorBattlegroundRatingInfo? {
@@ -1379,11 +1425,13 @@ class Game: NSObject, PowerEventHandler {
             return info
         }
         
-        _battlegroundsRatingInfo = MirrorHelper.getBattlegroundsRatingInfo()
+        cacheBattlegroundRatingInfo()
         
         logger.debug("Got battlegroundsRatingInfo=\(_battlegroundsRatingInfo ?? MirrorBattlegroundRatingInfo())")
         return _battlegroundsRatingInfo
     }
+
+    private(set) var battlegroundsRatingInfoCachedAt: Date?
     
     /// Read from the arena landing page, so it is only there while that scene is
     /// up - SceneHandler caches it on the way into the draft. The lazy read is
@@ -1764,8 +1812,10 @@ class Game: NSObject, PowerEventHandler {
         }
 		
 		_spectator = nil
-        _availableRaces = nil
-        _unavailableRaces = nil
+        battlegroundsStateLock.around {
+            _availableRaces = nil
+            _unavailableRaces = nil
+        }
         _brawlInfo = nil
         _battlegroundsBoardState?.reset()
         _battlegroundsDeityState?.reset()
@@ -1806,6 +1856,7 @@ class Game: NSObject, PowerEventHandler {
     
     func cacheBattlegroundRatingInfo() {
         _battlegroundsRatingInfo = MirrorHelper.getBattlegroundsRatingInfo()
+        battlegroundsRatingInfoCachedAt = Date()
     }
     
     func cacheArenaRating() {
@@ -2076,8 +2127,10 @@ class Game: NSObject, PowerEventHandler {
         
         windowManager.rootOverlay?.viewModel.linkOpponentDeck.isFriendlyMatch = isFriendlyMatch
         
-        if isBattlegroundsMatch() && currentGameMode == .spectator {
-            windowManager.rootOverlay?.viewModel.tier7PreLobby.reset()
+        if isBattlegroundsMatch() && currentGameMode == .spectator, let tier7PreLobby = windowManager.rootOverlay?.viewModel.tier7PreLobby {
+            DispatchQueue.main.async {
+                tier7PreLobby.reset()
+            }
         }
         
         if isFriendlyMatch {
@@ -2417,6 +2470,7 @@ class Game: NSObject, PowerEventHandler {
             windowManager.rootOverlay?.viewModel.battlegroundsHeroPicking.reset()
             windowManager.rootOverlay?.viewModel.battlegroundsQuestPicking.reset()
             windowManager.rootOverlay?.viewModel.battlegroundsTrinketPicking.reset()
+            windowManager.rootOverlay?.viewModel.battlegroundsHeroPowerPicking.reset()
             // GameEventHandler's IsBattlegroundsMatch branch clears the trial
             // once the match it was activated for is over, so the next game
             // has to spend a trial of its own rather than riding this token.
@@ -2499,6 +2553,10 @@ class Game: NSObject, PowerEventHandler {
     }
     
     private func updatePostGameBattlegroundsRating(gameStats: InternalGameStats) {
+        if let heroSelectionRating = battlegroundsHeroSelectionRating, heroSelectionRating.gameId == gameId {
+            gameStats.battlegroundsRatingAfter = heroSelectionRating.rating
+            return
+        }
         if let data = UploadMetaData.retryWhileNull(f: MirrorHelper.getBattlegroundsRatingChange, tries: 5, delay: 500) {
             gameStats.battlegroundsRatingAfter = data.ratingNew.intValue
         } else {
@@ -2728,6 +2786,7 @@ class Game: NSObject, PowerEventHandler {
                 self.windowManager.rootOverlay?.viewModel.battlegroundsHeroPicking.reset()
                 self.windowManager.rootOverlay?.viewModel.battlegroundsQuestPicking.reset()
                 self.windowManager.rootOverlay?.viewModel.battlegroundsTrinketPicking.reset()
+                self.windowManager.rootOverlay?.viewModel.battlegroundsHeroPowerPicking.reset()
                 self.hideBattlegroundsHeroPanel()
                 self.hideBattlegroundsTimewarpPanel()
                 self.updateBattlegroundsSessionPanel()
@@ -2740,9 +2799,11 @@ class Game: NSObject, PowerEventHandler {
                     self.onBattlegroundsShoppingStart()
                     OpponentDeadForTracker.shoppingStarted(game: self)
                     BobsBuddyInvoker.instance(gameId: self.gameId, turn: self.turnNumber() - 1)?.startShopping()
-                    let heroPowerIds = self.player.board.filter { x in x.isHeroPower }.compactMap { x in x.cardId }
+                    let heroPowers = self.player.board.filter { x in x.isHeroPower }
+                    let heroPowerIds = heroPowers.compactMap { x in x.cardId }
                     let trinketIds = self.player.trinkets.compactMap({ x in x.cardId })
                     self.battlegroundsMinionsOnHeroPowers(heroPowerIds)
+                    self.windowManager.rootOverlay?.viewModel.battlegroundsHeroGuides.onHeroPowers(heroPowers)
                     self.battlegroundsMinionsOnTrinkets(trinketIds)
                     // From here until combat, the board the Inspiration panel
                     // sends alongside a key minion is the live one.
@@ -2760,9 +2821,13 @@ class Game: NSObject, PowerEventHandler {
         // GameEventHandler's opponent-turn branch: shopping is over, so the
         // Inspiration panel freezes the board it will keep sending for the rest
         // of this turn. Solo only, as in HDT - a duos board changes hands.
-        if player == .opponent && !isInMenu && isBattlegroundsSoloMatch() {
-            DispatchQueue.main.async {
-                self.windowManager.rootOverlay?.viewModel.battlegroundsInspiration.onShoppingEnd()
+        if player == .opponent && !isInMenu && isBattlegroundsMatch() {
+            windowManager.rootOverlay?.viewModel.battlegroundsHeroPowerPicking.reset()
+
+            if isBattlegroundsSoloMatch() {
+                DispatchQueue.main.async {
+                    self.windowManager.rootOverlay?.viewModel.battlegroundsInspiration.onShoppingEnd()
+                }
             }
         }
 
@@ -2920,7 +2985,7 @@ class Game: NSObject, PowerEventHandler {
     // back with a win rate on hardly any card - HDT never asks for one.
     var isMulliganGuideMatch: Bool {
         return currentGameType == .gt_ranked || currentGameType == .gt_casual
-            || currentGameType == .gt_vs_friend || isArenaMatch
+            || currentGameType == .gt_vs_friend || isArenaMatch || isMulliganGV2BrawlOverride
     }
     
     // Mirrors HDT's GameV2.IsBattlegroundsHeroPickingDone: the player's own
@@ -3217,7 +3282,31 @@ class Game: NSObject, PowerEventHandler {
         }
     }
     
-    private func getBattlegroundsHeroPickStats() async -> BattlegroundsHeroPickStats? {
+    private var initialBattlegroundsHeroPickRequest: Task<Void, Never>?
+
+    // HDT writes this straight into CurrentGameStats, which HSTracker only
+    // builds once the game is over, so it is kept here until then.
+    private var battlegroundsHeroSelectionRating: (gameId: String, rating: Int)?
+
+    // conceding during hero selection skips STATE COMPLETE, and the rating is gone once the end screen is left
+    private func pollBattlegroundsHeroSelectionRating() async {
+        let currentGameId = gameId
+        while currentGameId == gameId && !isInMenu && (gameEntity?[.turn] ?? 0) == 0 {
+            if let data = MirrorHelper.getBattlegroundsRatingChange() {
+                battlegroundsHeroSelectionRating = (currentGameId, data.ratingNew.intValue)
+                return
+            }
+            await Task.sleep(milliseconds: 500)
+        }
+    }
+
+    private func cacheInitialBattlegroundsHeroPickParams(_ heroDbfIds: [Int]) async {
+        if let availableRaces = try? await BattlegroundsUtils.waitForAvailableRaces() {
+            cacheBattlegroundsHeroPickParams(heroDbfIds, availableRaces)
+        }
+    }
+
+    private func getBattlegroundsHeroPickStats(paramsReady: Task<Void, Never>? = nil, parameters: BattlegroundsHeroPickStatsParams? = nil) async -> BattlegroundsHeroPickStats? {
         if spectator {
             return nil
         }
@@ -3232,12 +3321,15 @@ class Game: NSObject, PowerEventHandler {
             return nil
         }
 
-        let userOwnsTier7 = HSReplayAPI.accountData?.is_tier7 ?? false
-        if !userOwnsTier7 && (Tier7Trial.remainingTrials ?? 0) == 0 {
+        if !Tier7Trial.isAvailable {
             return nil
         }
 
-        let parameters = getBattlegroundsHeroPickParams()
+        if let paramsReady {
+            await paramsReady.value
+        }
+
+        let parameters = parameters ?? getBattlegroundsHeroPickParams()
 
         // Avoid using a trial when we can't get the api params anyway.
         guard let parameters else {
@@ -3246,18 +3338,12 @@ class Game: NSObject, PowerEventHandler {
             return nil
         }
 
-        // Use a trial if we can
-        var token: String?
-        if !userOwnsTier7 {
-            if let acc = MirrorHelper.getAccountId() {
-                token = await Tier7Trial.activate(hi: acc.hi.int64Value, lo: acc.lo.int64Value)
-            }
-            if token == nil {
-                // FIXME: add
-                //throw new HeroPickingException("Unable to get trial token")
-                return nil
-            }
+        guard let access = await Tier7Trial.getAccess() else {
+            // FIXME: add
+            //throw new HeroPickingException("Unable to start Tier7 trial")
+            return nil
         }
+        let token = access.trialToken
 
 #if(DEBUG)
         logger.debug("Fetching Battlegrounds Hero Pick stats with parameters=\(parameters)...")
@@ -3267,7 +3353,7 @@ class Game: NSObject, PowerEventHandler {
 
         let isDuos = isBattlegroundsDuosMatch()
         
-        let stats = (token != nil && !userOwnsTier7) ?
+        let stats = token != nil ?
             // trial
             isDuos ? await HSReplayAPI.getTier7DuosHeroPickStats(token: token, parameters: parameters) : await HSReplayAPI.getTier7HeroPickStats(token: token, parameters: parameters) :
             // tier 7
@@ -3294,16 +3380,22 @@ class Game: NSObject, PowerEventHandler {
 
         // refresh the offered heroes
         snapshotBattlegroundsOfferedHeroes(heroes)
-        cacheBattlegroundsHeroPickParams(true)
 
-        defer {
-            battlegroundsHeroPickingLatch -= 1
-        }
-        
         battlegroundsHeroPickingLatch += 1
         let latchOut = battlegroundsHeroPickingLatch
-        var battlegroundsHeroPickStats: BattlegroundsHeroPickStats?
-        battlegroundsHeroPickStats = await getBattlegroundsHeroPickStats()
+
+        // reroll params build on the initial params and echo the ref from its response
+        if let initialRequest = initialBattlegroundsHeroPickRequest {
+            await initialRequest.value
+        }
+
+        // another reroll has happened while waiting, leave the request to that one
+        if latchOut != battlegroundsHeroPickingLatch {
+            return
+        }
+
+        cacheBattlegroundsHeroRerollParams()
+        let battlegroundsHeroPickStats = await getBattlegroundsHeroPickStats()
 
         // another task has updated them since (fast reroll)
         if latchOut != battlegroundsHeroPickingLatch {
@@ -3315,8 +3407,7 @@ class Game: NSObject, PowerEventHandler {
             return
         }
 
-        if let stats = battlegroundsHeroPickStats {
-            let heroIds = heroes.sorted(by: { (a, b) -> Bool in return a.zonePosition < b.zonePosition }).compactMap { x in x.card.dbfId }
+        if let stats = battlegroundsHeroPickStats, let heroIds = battlegroundsHeroPickState.offeredHeroDbfIds {
             DispatchQueue.main.async { [self] in
                 self.showBattlegroundsHeroPickingStats(heroIds.compactMap({ dbfId in stats.data.first { x in x.hero_dbf_id == dbfId }}), stats.toast.parameters, stats.toast.min_mmr, stats.toast.anomaly_adjusted ?? false)
                 self.showBattlegroundsHeroPanel(heroIds, self.isBattlegroundsDuosMatch(), stats.toast.parameters)
@@ -3337,30 +3428,32 @@ class Game: NSObject, PowerEventHandler {
     
     private var _battlegroundsHeroPickStatsParams: BattlegroundsHeroPickStatsParams?
     
-    func cacheBattlegroundsHeroPickParams(_ isReroll: Bool) {
-        if let _battlegroundsHeroPickStatsParams {
-            // Already set? Probably a reroll - just update the hero dbf ids
-            guard let newHeroDbfIds = battlegroundsHeroPickState.offeredHeroDbfIds else {
-                return
-            }
+    func cacheBattlegroundsHeroPickParams(_ heroDbfIds: [Int], _ availableRaces: [Race]) {
+        _battlegroundsHeroPickStatsParams = BattlegroundsHeroPickStatsParams(hero_dbf_ids: heroDbfIds, minion_types: availableRaces.compactMap { x in Int(Race.allCases.firstIndex(of: x)!) }, anomaly_dbf_id: BattlegroundsUtils.getBattlegroundsAnomalyDbfId(game: gameEntity), deity_dbf_id: BattlegroundsUtils.getBattlegroundsDeityDbfId(game: gameEntity), game_language: "\(Settings.hearthstoneLanguage ?? .enUS)", battlegrounds_rating: battlegroundsRatingInfo?.rating.intValue, is_reroll: false)
+    }
 
-            self._battlegroundsHeroPickStatsParams = BattlegroundsHeroPickStatsParams(hero_dbf_ids: newHeroDbfIds, minion_types: _battlegroundsHeroPickStatsParams.minion_types, anomaly_dbf_id: BattlegroundsUtils.getBattlegroundsAnomalyDbfId(game: gameEntity), deity_dbf_id: BattlegroundsUtils.getBattlegroundsDeityDbfId(game: gameEntity), game_language: "\(Settings.hearthstoneLanguage ?? .enUS)", battlegrounds_rating: battlegroundsRatingInfo?.rating.intValue, is_reroll: isReroll, hero_pick_ref: _battlegroundsHeroPickStatsParams.hero_pick_ref)
+    func cacheBattlegroundsHeroRerollParams() {
+        guard let _battlegroundsHeroPickStatsParams else {
             return
         }
 
-        guard let availableRaces else {
+        guard let newHeroDbfIds = battlegroundsHeroPickState.offeredHeroDbfIds else {
             return
         }
 
-        guard let heroDbfIds = battlegroundsHeroPickState.offeredHeroDbfIds else {
-            return
-        }
-
-        _battlegroundsHeroPickStatsParams = BattlegroundsHeroPickStatsParams(hero_dbf_ids: heroDbfIds, minion_types: availableRaces.compactMap { x in Int(Race.allCases.firstIndex(of: x)!) }, anomaly_dbf_id: BattlegroundsUtils.getBattlegroundsAnomalyDbfId(game: gameEntity), deity_dbf_id: BattlegroundsUtils.getBattlegroundsDeityDbfId(game: gameEntity), game_language: "\(Settings.hearthstoneLanguage ?? .enUS)", battlegrounds_rating: battlegroundsRatingInfo?.rating.intValue, is_reroll: isReroll)
+        self._battlegroundsHeroPickStatsParams = BattlegroundsHeroPickStatsParams(hero_dbf_ids: newHeroDbfIds, minion_types: _battlegroundsHeroPickStatsParams.minion_types, anomaly_dbf_id: BattlegroundsUtils.getBattlegroundsAnomalyDbfId(game: gameEntity), deity_dbf_id: BattlegroundsUtils.getBattlegroundsDeityDbfId(game: gameEntity), game_language: "\(Settings.hearthstoneLanguage ?? .enUS)", battlegrounds_rating: battlegroundsRatingInfo?.rating.intValue, is_reroll: true, hero_pick_ref: _battlegroundsHeroPickStatsParams.hero_pick_ref)
     }
     
     private func getBattlegroundsHeroPickParams() -> BattlegroundsHeroPickStatsParams? {
         return _battlegroundsHeroPickStatsParams
+    }
+
+    func getBattlegroundsHeroPowerPickParams(heroDbfId: Int, heroPowerDbfIds: [Int]) -> BattlegroundsHeroPickStatsParams? {
+        guard let availableRaces else {
+            return nil
+        }
+
+        return BattlegroundsHeroPickStatsParams(hero_dbf_ids: [heroDbfId], hero_power_dbf_ids: heroPowerDbfIds, minion_types: availableRaces.compactMap { x in Race.allCases.firstIndex(of: x) }, anomaly_dbf_id: BattlegroundsUtils.getBattlegroundsAnomalyDbfId(game: gameEntity), deity_dbf_id: BattlegroundsUtils.getBattlegroundsDeityDbfId(game: gameEntity), game_language: "\(Settings.hearthstoneLanguage ?? .enUS)", battlegrounds_rating: currentBattlegroundsRating, is_reroll: false, hero_pick_ref: _battlegroundsHeroPickStatsParams?.hero_pick_ref)
     }
     
     private var _battlegroundsHeroPickState: BattlegroundsHeroPickState?
@@ -3374,8 +3467,9 @@ class Game: NSObject, PowerEventHandler {
         return state
     }
     
-    func snapshotBattlegroundsOfferedHeroes(_ heroes: [Entity]) {
-        _ = battlegroundsHeroPickState.snapshotOfferedHeroes(heroes)
+    @discardableResult
+    func snapshotBattlegroundsOfferedHeroes(_ heroes: [Entity]) -> [Int] {
+        return battlegroundsHeroPickState.snapshotOfferedHeroes(heroes)
     }
     @discardableResult
     func snapshotBattlegroundsHeroPick() -> Int? {
@@ -3466,6 +3560,13 @@ class Game: NSObject, PowerEventHandler {
                     card_type: entry.cardType,
                     minion_types: entry.minionTypes.map { $0.intValue },
                     banned: entry.banned)
+            },
+            server_minion_data: pool.serverMinionData.map { data in
+                BattlegroundsTavernPoolObservationParams.ServerMinionDataEntry(
+                    dbf_id: data.dbfId,
+                    script_data_num_1: data.scriptDataNum1,
+                    script_data_num_2: data.scriptDataNum2,
+                    tech_level: data.techLevel)
             })
         HSReplayAPI.postBattlegroundsTavernPoolObservation(parameters: parameters)
     }
@@ -3492,12 +3593,6 @@ class Game: NSObject, PowerEventHandler {
 
         await Task.sleep(milliseconds: 500)
         
-        var counter = 0
-        while availableRaces == nil && counter < 5 {
-            await Task.sleep(milliseconds: 500)
-            counter += 1
-        }
-        
         updateBattlegroundsSessionPanel()
         
         if isBattlegroundsDuosMatch() {
@@ -3508,12 +3603,18 @@ class Game: NSObject, PowerEventHandler {
             return
         }
 
-        snapshotBattlegroundsOfferedHeroes(heroes)
-        cacheBattlegroundsHeroPickParams(false)
+        if !spectator {
+            Task.detached {
+                await self.pollBattlegroundsHeroSelectionRating()
+            }
+        }
 
-        let heroIds = heroes.sorted(by: { (a, b) -> Bool in a.zonePosition < b.zonePosition }).compactMap { x in x.card.dbfId }
-            
-        async let statsTask = getBattlegroundsHeroPickStats()
+        var heroIds = snapshotBattlegroundsOfferedHeroes(heroes)
+        let heroPickParamsTask = Task { await self.cacheInitialBattlegroundsHeroPickParams(heroIds) }
+        initialBattlegroundsHeroPickRequest = heroPickParamsTask
+
+        let statsTask = Task { await self.getBattlegroundsHeroPickStats(paramsReady: heroPickParamsTask) }
+        initialBattlegroundsHeroPickRequest = Task { _ = await statsTask.value }
                 
         // Wait for the mulligan to be ready. Unlike the constructed guides, the
         // hero panel is put up from here whether or not the pick is still open -
@@ -3524,8 +3625,16 @@ class Game: NSObject, PowerEventHandler {
         
         var battlegroundsHeroPickStats: BattlegroundsHeroPickStats?
         
-        let (finalResults, _) = await (statsTask, waitAndAppear)
+        let (finalResults, _) = await (statsTask.value, waitAndAppear)
         battlegroundsHeroPickStats = finalResults
+
+        // the game ended while the params were waiting for races
+        if isInMenu {
+            return
+        }
+
+        // the stats were requested for the initial heroes, some may have been rerolled since
+        heroIds = battlegroundsHeroPickState.offeredHeroDbfIds ?? heroIds
             
         var toastParams: [String: String]?
             
@@ -4176,6 +4285,12 @@ class Game: NSObject, PowerEventHandler {
                 let offered = offeredEntities.filter { x in x.isHeroPower }
                 let heroPowerIds = (player.board.filter({ x in x.isHeroPower }) + offered).compactMap({ x in x.card.id })
                 battlegroundsMinionsOnHeroPowers(heroPowerIds)
+
+                if entities[choice.sourceEntityId]?.cardId == CardIds.NonCollectible.Neutral.AdventureTavernBrawl {
+                    Task.detached {
+                        await self.handleBattlegroundsFinleyChoice(offered)
+                    }
+                }
             }
         }
         player.offeredEntityIds = choice.offeredEntityIds ?? [Int]()
@@ -4212,6 +4327,31 @@ class Game: NSObject, PowerEventHandler {
         DispatchQueue.main.async {
             self.windowManager.rootOverlay?.viewModel.battlegroundsMinionsGuide.onQuests(quests)
         }
+    }
+
+    private func handleBattlegroundsFinleyChoice(_ offeredHeroPowers: [Entity]) async {
+        guard let heroDbfId = player.hero?.card.dbfId else {
+            return
+        }
+
+        let heroPowerDbfIds = offeredHeroPowers.map { x in x.card.dbfId }
+
+        guard let parameters = getBattlegroundsHeroPowerPickParams(heroDbfId: heroDbfId, heroPowerDbfIds: heroPowerDbfIds) else {
+            return
+        }
+
+        // HDT shows the disabled and error messages from here, but the panel is
+        // only visible once there are stats to show, so neither is ever seen.
+        guard let stats = await getBattlegroundsHeroPickStats(parameters: parameters) else {
+            return
+        }
+
+        // the choice was completed while the stats were loading
+        if !offeredHeroPowers.all({ x in player.offeredEntityIds.contains(x.id) }) {
+            return
+        }
+
+        windowManager.rootOverlay?.viewModel.battlegroundsHeroPowerPicking.setHeroPowerStats(heroPowerDbfIds: heroPowerDbfIds, stats: stats.data, parameters: stats.toast.parameters, minMmr: stats.toast.min_mmr, anomalyAdjusted: stats.toast.anomaly_adjusted ?? false)
     }
 
     @MainActor
@@ -4263,12 +4403,12 @@ class Game: NSObject, PowerEventHandler {
             return nil
         }
         
-        let userOwnsTier7 = HSReplayAPI.accountData?.is_tier7 ?? false
-        if !userOwnsTier7 && Tier7Trial.token == nil {
+        // trinkets are offered after the mulligan, so this only continues a trial from hero picking
+        guard let access = await Tier7Trial.getAccess() else {
             return nil
         }
         
-        if let token = Tier7Trial.token {
+        if let token = access.trialToken {
             return await HSReplayAPI.getTier7TrinketPickStats(token: token, parameters: requestParams)
         } else {
             return await HSReplayAPI.getTier7TrinketPickStats(parameters: requestParams)
@@ -4321,6 +4461,7 @@ class Game: NSObject, PowerEventHandler {
 
     func setChoicesVisible(_ choicesVisible: Bool, _ isShopChoice: Bool, _ cardIds: [String]?) {
         windowManager.rootOverlay?.viewModel.battlegroundsTrinketPicking.choicesVisible = choicesVisible
+        windowManager.rootOverlay?.viewModel.battlegroundsHeroPowerPicking.choicesVisible = choicesVisible
         OverlayOpacityMask.trace("setChoicesVisible visible=\(choicesVisible)"
                                  + " shop=\(isShopChoice)"
                                  + " cards=\(cardIds ?? [String]())"
@@ -4510,7 +4651,7 @@ class Game: NSObject, PowerEventHandler {
         
         let boardCards = args.boardCards
         let userHasTier7 = HSReplayAPI.accountData?.is_tier7 ?? false // TODO: trial active
-        let currentPeriod = RemoteConfig.battlegroundsLiveMetaPeriod
+        let currentPeriod = RemoteConfig.battlegroundsLiveMetaPeriod(isDuos: isBattlegroundsDuosMatch())
         let hasTimewarpMechanic = currentPeriod?.mechanics.firstIndex(of: "timewarp") != nil
         
         if args.isActive && boardCards.count > 0 && userHasTier7 && hasTimewarpMechanic {
@@ -4577,13 +4718,17 @@ class Game: NSObject, PowerEventHandler {
             if isBattlegroundsMatch() {
                 windowManager.rootOverlay?.viewModel.battlegroundsQuestPicking.reset()
                 windowManager.rootOverlay?.viewModel.battlegroundsTrinketPicking.reset()
+                windowManager.rootOverlay?.viewModel.battlegroundsHeroPowerPicking.reset()
                 if source?[.bacon_is_magic_item_discover] ?? 0 > 0 {
                     let chosenTrinketIds = (self.player.trinkets + chosen).compactMap({ x in x.cardId })
                     battlegroundsMinionsOnTrinkets(chosenTrinketIds)
                 }
                 // the entity of a chosen hero power is only created after the choice completes, concat the chosen one
-                let chosenHeroPowerIds = player.board.filter({ x in x.isHeroPower }).compactMap({ x in x.card.id }) + chosen.filter({ x in x.isHeroPower }).compactMap({ x in x.card.id })
-                battlegroundsMinionsOnHeroPowers(chosenHeroPowerIds)
+                let chosenHeroPowers = player.board.filter({ x in x.isHeroPower }) + chosen.filter({ x in x.isHeroPower })
+                battlegroundsMinionsOnHeroPowers(chosenHeroPowers.compactMap({ x in x.card.id }))
+                DispatchQueue.main.async {
+                    self.windowManager.rootOverlay?.viewModel.battlegroundsHeroGuides.onHeroPowers(chosenHeroPowers)
+                }
                 
                 // quest choice
                 if let chosenEntity = chosen.first {
@@ -4844,7 +4989,18 @@ class Game: NSObject, PowerEventHandler {
         let starLevel = playerMedalInfo?.starLevel ?? 0
         let starsPerWin = playerMedalInfo?.starsPerWin ?? 0
 
-        _mulliganV2Params = MulliganV2Params(deckstring: activeDeck.shortid, player_class: activeDeck.playerClass.rawValue.uppercased(), deck_cards: deckCards, opponent_class: opponentClass.rawValue.uppercased(), player_initiative: playerEntity?[.first_player] == 1 ? "FIRST" : "COIN", player_region: Region.toBnetRegion(region: currentRegion), player_star_level: starLevel > 0 ? starLevel : nil, player_star_multiplier: starsPerWin > 0 ? starsPerWin : nil, game_type: BnetGameType.getBnetGameType(gameType: currentGameType, format: currentFormat).rawValue, format_type: currentFormatType.rawValue, offered_cards: offeredCards, mulligan_state: Mulligan.input.rawValue)
+        // A brawl deck is sent as a Ranked Standard one, deckstring included -
+        // HDT's asRankedStandard.
+        let asRankedStandard = isMulliganGV2BrawlOverride
+        var deckstring = activeDeck.shortid
+        if asRankedStandard, let deck = DeckSerializer.deserialize(input: deckstring) {
+            deck.format = .ft_standard
+            deckstring = DeckSerializer.serialize(deck: deck) ?? deckstring
+        }
+        let gameType = asRankedStandard ? BnetGameType.bgt_ranked_standard : BnetGameType.getBnetGameType(gameType: currentGameType, format: currentFormat)
+        let formatType = asRankedStandard ? FormatType.ft_standard : currentFormatType
+
+        _mulliganV2Params = MulliganV2Params(deckstring: deckstring, player_class: activeDeck.playerClass.rawValue.uppercased(), deck_cards: deckCards, opponent_class: opponentClass.rawValue.uppercased(), player_initiative: playerEntity?[.first_player] == 1 ? "FIRST" : "COIN", player_region: Region.toBnetRegion(region: currentRegion), player_star_level: starLevel > 0 ? starLevel : nil, player_star_multiplier: starsPerWin > 0 ? starsPerWin : nil, game_type: gameType.rawValue, format_type: formatType.rawValue, offered_cards: offeredCards, mulligan_state: Mulligan.input.rawValue)
     }
 
     func getMulliganV2Params() -> MulliganV2Params? {
@@ -4877,10 +5033,15 @@ class Game: NSObject, PowerEventHandler {
         // check already confirmed has coverage worth spending a trial on.
         var token: String?
         if !userOwnsPremium {
-            guard let gameType = BnetGameType(rawValue: parameters.game_type),
-                  let preLobbyViewModel = mulliganGuidePreLobbyViewModel,
-                  preLobbyViewModel.isDeckAvailableForMulliganGuide(gameType: gameType, deckstring: parameters.deckstring) else {
-                return nil
+            // The pre-lobby only runs in the constructed lobby, so there is no
+            // deck status cached for a brawl deck - let the request through and
+            // let the response decide.
+            if !isMulliganGV2BrawlOverride {
+                guard let gameType = BnetGameType(rawValue: parameters.game_type),
+                      let preLobbyViewModel = mulliganGuidePreLobbyViewModel,
+                      preLobbyViewModel.isDeckAvailableForMulliganGuide(gameType: gameType, deckstring: parameters.deckstring) else {
+                    return nil
+                }
             }
             guard let acc = MirrorHelper.getAccountId() else {
                 return nil
@@ -5030,15 +5191,19 @@ class Game: NSObject, PowerEventHandler {
         }
 
         if let widgetVm = windowManager.rootOverlay?.viewModel.constructedMulliganPreLobbyWidget {
-            widgetVm.isModalOpen = isModalOpen
-            widgetVm.visualsFormatType = vft
+            DispatchQueue.main.async {
+                widgetVm.isModalOpen = isModalOpen
+                widgetVm.visualsFormatType = vft
+            }
         }
     }
 
     func setConstructedQueue(_ inQueue: Bool) {
         mulliganGuidePreLobbyViewModel?.isInQueue = inQueue
         if let widgetVm = windowManager.rootOverlay?.viewModel.constructedMulliganPreLobbyWidget {
-            widgetVm.isInQueue = inQueue
+            DispatchQueue.main.async {
+                widgetVm.isInQueue = inQueue
+            }
         }
     }
     
@@ -5321,8 +5486,10 @@ class Game: NSObject, PowerEventHandler {
     }
     
     func onBigCardChange(_ state: BigCardArgs) {
-        hoveredCard = state
         DispatchQueue.main.async {
+            // Assigned here, not on the BigCardWatcher queue: tooltipDisplay reads it on
+            // main, and a torn read of the String inside crashes in characterAtIndex.
+            self.hoveredCard = state
             // HDT's Watchers.OnBigCardChange calls SetCardOpacityMask first:
             // the game is drawing the hovered card blown up, with its tooltips
             // and enchantment list, and the overlay has to get out of the way.

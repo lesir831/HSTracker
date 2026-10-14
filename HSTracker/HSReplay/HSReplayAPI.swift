@@ -7,8 +7,8 @@
 //
 
 import Foundation
+import AppKit
 import OAuthSwift
-import PromiseKit
 import Mixpanel
 
 enum HSReplayError: Error {
@@ -85,13 +85,42 @@ class HSReplayAPI {
                         HSReplayAPI.claimAccount()
                     }
 
+                    NotificationCenter.default.post(name: Notification.Name(rawValue: Events.hsreplay_authenticated), object: nil)
                     handle()
                 case .failure(let error):
-                    // TODO: Better error handling
                     logger.info("HSReplay: OAuth failed \(error)")
+                    DispatchQueue.main.async {
+                        if showLoginFailedMessage(error) {
+                            oAuthAuthorize(handle: handle)
+                        }
+                    }
                 }
             }
         )
+    }
+
+    // HDT's ShowLoginFailedMessage. There is no callback listener to fail here -
+    // the browser hands the code back through the hstracker:// URL scheme - so
+    // only its "cancelled" and "server" descriptions apply. Returns true when the
+    // user asks to try again.
+    @MainActor
+    private static func showLoginFailedMessage(_ error: OAuthSwiftError) -> Bool {
+        let description: String
+        switch error {
+        case .cancelled, .accessDenied:
+            description = "MessageDialogs_LoginFailed_Description_Cancelled"
+        default:
+            description = "MessageDialogs_LoginFailed_Description_Server"
+        }
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = String.localizedString("MessageDialogs_LoginFailed_Title", comment: "")
+        alert.informativeText = String.localizedString(description, comment: "")
+        alert.addButton(withTitle: String.localizedString("MessageDialogs_LoginFailed_Button_TryAgain", comment: ""))
+        alert.addButton(withTitle: String.localizedString("MessageDialogs_LoginFailed_Button_Close", comment: ""))
+        // the browser has focus after the login redirect
+        NSApp.activate(ignoringOtherApps: true)
+        return alert.runModal() == .alertFirstButtonReturn
     }
     
     static func updateOAuthCredential() {
@@ -108,54 +137,34 @@ class HSReplayAPI {
     }
     
     static func startAuthorizedRequest(_ url: String, method: OAuthSwiftHTTPRequest.Method, parameters: OAuthSwift.Parameters = [:], headers: OAuthSwift.Headers? = nil, body: Data? = nil, onTokenRenewal: OAuthSwift.TokenRenewedHandler? = nil, completionHandler completion: @escaping OAuthSwiftHTTPRequest.CompletionHandler) {
-        
-        if let expiration = Settings.hsReplayOAuthTokenExpiration {
-            if expiration.timeIntervalSince(Date()) <= 0 {
-                logger.debug("OAuth token is expired, renewing")
-                
-                HSReplayAPI.oauthswift.renewAccessToken(withRefreshToken: HSReplayAPI.oauthswift.client.credential
-                    .oauthRefreshToken, completionHandler: { result in
-                        switch result {
-                        case .success(let (credential, _, parameters)):
-                            logger.debug("HSReplay: Refreshed OAuthToken")
-                            Settings.hsReplayOAuthToken =  credential.oauthToken
-                            Settings.hsReplayOAuthRefreshToken = credential.oauthRefreshToken
-                            Settings.hsReplayOAuthTokenExpiration = credential.oauthTokenExpiresAt
-                            Settings.hsReplayOAuthScope = parameters["scope"] as? String
-                            updateOAuthCredential()
-                            oauthswift.client.requestWithAutomaticAccessTokenRenewal(url: URL(string: url)!, method: method, parameters: parameters, headers: headers, accessTokenUrl: HSReplay.oAuthTokenUrl, onTokenRenewal: onTokenRenewal, completionHandler: completion)
-                        case .failure(let error):
-                            logger.error(error)
-                            // try again, just in case
-                            oauthswift.client.requestWithAutomaticAccessTokenRenewal(url: URL(string: url)!, method: method, parameters: parameters, headers: headers, accessTokenUrl: HSReplay.oAuthTokenUrl, onTokenRenewal: onTokenRenewal, completionHandler: completion)
+        // proceed even when the refresh failed, just in case
+        OAuthTokenRefresher.ensureFresh { _ in
+            let accessToken = oauthswift.client.credential.oauthToken
+            oauthswift.client.request(url, method: method, parameters: parameters, headers: headers, body: body) { result in
+                switch result {
+                case .success(let response):
+                    completion(.success(response))
+                case .failure(let error):
+                    switch error {
+                    case .tokenExpired:
+                        // only retry once
+                        guard onTokenRenewal != nil else {
+                            completion(.failure(error))
+                            return
                         }
-                    })
-                return
-            }
-        }
-        oauthswift.client.request(url, method: method, parameters: parameters, headers: headers, body: body) { result in
-            switch result {
-            case .success(let response):
-                completion(.success(response))
-            case .failure(let error):
-                switch error {
-                case .tokenExpired:
-                    if let onTokenRenewal {
-                        oauthswift.renewAccessToken(withRefreshToken: HSReplayAPI.oauthswift.client.credential
-                            .oauthRefreshToken, completionHandler: { result in
-                                switch result {
-                                case .success(let (credential, _, _)):
-                                    onTokenRenewal(.success(credential))
-                                    startAuthorizedRequest(url, method: method, parameters: parameters, headers: headers, body: body, onTokenRenewal: nil, completionHandler: completion)
-                                case .failure(let error):
-                                    completion(.failure(.tokenExpired(error: error)))
-                                }
-                            })
+                        logger.warning("Access token was rejected, refreshing and retrying...")
+                        OAuthTokenRefresher.refreshRejected(accessToken) { success in
+                            guard success else {
+                                completion(.failure(error))
+                                return
+                            }
+                            startAuthorizedRequest(url, method: method, parameters: parameters, headers: headers, body: body, onTokenRenewal: nil, completionHandler: completion)
+                        }
+                    case .requestError:
+                        completion(.failure(error))
+                    default:
+                        completion(.failure(.tokenExpired(error: nil)))
                     }
-                case .requestError:
-                    completion(.failure(error))
-                default:
-                    completion(.failure(.tokenExpired(error: nil)))
                 }
             }
         }
@@ -207,21 +216,21 @@ class HSReplayAPI {
     //        }
     //    }
     
-    static func claimBattleTag(account_hi: Int64, account_lo: Int64, battleTag: String) -> Promise<ClaimBlizzardAccountResponse> {
-        return Promise<ClaimBlizzardAccountResponse> { seal in
+    static func claimBattleTag(account_hi: Int64, account_lo: Int64, battleTag: String) async -> ClaimBlizzardAccountResponse {
+        return await withCheckedContinuation { continuation in
             startAuthorizedRequest("\(HSReplay.claimBattleTagUrl)/\(account_hi)/\(account_lo)/", method: .POST,
                                    parameters: ["battletag": battleTag], headers: defaultHeaders,
                                    onTokenRenewal: tokenRenewalHandler,
                                    completionHandler: { result in
                 switch result {
                 case .success:
-                    seal.fulfill(.success)
+                    continuation.resume(returning: .success)
                 case .failure(let error):
                     logger.error(error)
                     if error.description.contains("account_already_claimed") {
-                        seal.fulfill(.tokenAlreadyClaimed)
+                        continuation.resume(returning: .tokenAlreadyClaimed)
                     } else {
-                        seal.fulfill(.error)
+                        continuation.resume(returning: .error)
                     }
                 }
             }
@@ -367,12 +376,11 @@ class HSReplayAPI {
     //        }
     //    }
     
-    private static func getUploadCollectionToken(collectionType: CollectionType) -> Promise<String> {
-        return Promise<String> { seal in
-            guard let accountId = MirrorHelper.getAccountId() else {
-                seal.reject(HSReplayError.missingAccount)
-                return
-            }
+    private static func getUploadCollectionToken(collectionType: CollectionType) async throws -> String {
+        guard let accountId = MirrorHelper.getAccountId() else {
+            throw HSReplayError.missingAccount
+        }
+        return try await withCheckedThrowingContinuation { continuation in
             startAuthorizedRequest("\(HSReplay.collectionTokensUrl)", method: .POST, parameters: ["account_hi": accountId.hi, "account_lo": accountId.lo, "type": collectionType == .constructed ? "CONSTRUCTED" : "MERCENARIES"], headers: defaultHeaders, onTokenRenewal: tokenRenewalHandler,
                                    completionHandler: { result in
                 switch result {
@@ -380,17 +388,17 @@ class HSReplayAPI {
                     do {
                         guard let json = try response.jsonObject() as? [String: Any], let token = json["url"] as? String else {
                             logger.error("HSReplay: Unexpected JSON \(String(describing: response.string))")
-                            seal.reject(HSReplayError.collectionUploadMissingURL)
+                            continuation.resume(throwing: HSReplayError.collectionUploadMissingURL)
                             return
                         }
                         logger.info("HSReplay: obtained new collection upload json: \(json)")
-                        seal.fulfill(token)
+                        continuation.resume(returning: token)
                     } catch {
-                        seal.reject(HSReplayError.missingAccount)
+                        continuation.resume(throwing: HSReplayError.missingAccount)
                     }
                 case .failure(let error):
                     logger.error(error)
-                    seal.reject(HSReplayError.authorizationTokenNotSet)
+                    continuation.resume(throwing: HSReplayError.authorizationTokenNotSet)
                 }
             })
         }
@@ -432,32 +440,14 @@ class HSReplayAPI {
     //        }
     //    }
     
-    private static func uploadCollectionInternal(collection: CollectionBase, url: String, seal: Resolver<Bool>) {
-        let upload = Http(url: url)
+    static func uploadCollection(collection: CollectionBase, collectionType: CollectionType) async throws -> Bool {
+        let url = try await getUploadCollectionToken(collectionType: collectionType)
         let enc = JSONEncoder()
         enc.outputFormatting = .sortedKeys
-        if let data = try? enc.encode(collection) {
-            upload.uploadPromise(method: .put, headers: [ "Content-Type": "application/json" ], data: data).done { data in
-                if data != nil {
-                    seal.fulfill(true)
-                }
-            }.catch { error in
-                logger.error(error)
-                seal.fulfill(false)
-            }
-        } else {
-            seal.fulfill(false)
+        guard let data = try? enc.encode(collection) else {
+            return false
         }
-    }
-    
-    static func uploadCollection(collection: CollectionBase, collectionType: CollectionType) -> Promise<Bool> {
-        return Promise<Bool> { seal in
-            getUploadCollectionToken(collectionType: collectionType).done { url in
-                uploadCollectionInternal(collection: collection, url: url, seal: seal)
-            }.catch { error in
-                seal.reject(error)
-            }
-        }
+        return await Http(url: url).uploadAsync(method: .put, headers: [ "Content-Type": "application/json" ], data: data) != nil
     }
     
     static func parseResponse<T: Decodable>(data: Data, defaultValue: T) -> T {
@@ -482,33 +472,25 @@ class HSReplayAPI {
         }
     }
     
-    static func getAccount() -> Promise<GetAccountResult> {
-        return Promise<GetAccountResult> { seal in
+    static func getAccount() async -> GetAccountResult {
+        return await withCheckedContinuation { continuation in
             startAuthorizedRequest("\(HSReplay.accountUrl)", method: .GET, parameters: [:], headers: defaultHeaders, onTokenRenewal: tokenRenewalHandler, completionHandler: { result in
                 switch result {
                 case .success(let response):
                     if let ad = parseAccountData(data: response.data) {
                         accountData = ad
-                        seal.fulfill(.success(account: ad))
+                        NotificationCenter.default.post(name: Notification.Name(rawValue: Events.hsreplay_account_data_updated), object: nil)
+                        continuation.resume(returning: .success(account: ad))
                     } else {
                         accountData = nil
-                        seal.fulfill(.failed)
+                        continuation.resume(returning: .failed)
                     }
                 case .failure(let error):
                     accountData = nil
                     logger.error(error)
-                    seal.fulfill(.failed)
+                    continuation.resume(returning: .failed)
                 }
             })
-        }
-    }
-    
-    static func getAccountAsync() async -> GetAccountResult {
-        await withCheckedContinuation { continuation in
-            _ = getAccount().map { result in
-                continuation.resume(returning: result)
-                return
-            }
         }
     }
     
@@ -544,35 +526,26 @@ class HSReplayAPI {
         guard let token = token else {
             return nil
         }
-        return await withCheckedContinuation { continuation in
-            let encoder = JSONEncoder()
-            var body: Data?
-            do {
-                body = try encoder.encode(parameters)
-                if let body = body {
-                    logger.debug("Sending hero picks request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
-                }
-            } catch {
-                logger.error(error)
+        let encoder = JSONEncoder()
+        var body: Data?
+        do {
+            body = try encoder.encode(parameters)
+            if let body = body {
+                logger.debug("Sending hero picks request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
             }
-            guard let body = body else {
-                continuation.resume(returning: nil)
-                return
-            }
-            let http = Http(url: "\(HSReplay.tier7HeroPickStatsUrl)")
-            _ = http.uploadPromise(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body).done { response in
-                guard let data = response as? Data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                logger.debug("Response: \(String(data: data, encoding: .utf8) ?? "FAILED")")
-                let bqs: BattlegroundsHeroPickStats? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: bqs)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        } catch {
+            logger.error(error)
         }
+        guard let body = body else {
+            return nil
+        }
+        let http = Http(url: "\(HSReplay.tier7HeroPickStatsUrl)")
+        guard let data = await http.uploadAsync(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body) else {
+            return nil
+        }
+        logger.debug("Response: \(String(data: data, encoding: .utf8) ?? "FAILED")")
+        let bqs: BattlegroundsHeroPickStats? = parseResponse(data: data, defaultValue: nil)
+        return bqs
     }
     
     static func getTier7DuosHeroPickStats(parameters: BattlegroundsHeroPickStatsParams) async -> BattlegroundsHeroPickStats? {
@@ -607,35 +580,26 @@ class HSReplayAPI {
         guard let token = token else {
             return nil
         }
-        return await withCheckedContinuation { continuation in
-            let encoder = JSONEncoder()
-            var body: Data?
-            do {
-                body = try encoder.encode(parameters)
-                if let body = body {
-                    logger.debug("Sending hero picks request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
-                }
-            } catch {
-                logger.error(error)
+        let encoder = JSONEncoder()
+        var body: Data?
+        do {
+            body = try encoder.encode(parameters)
+            if let body = body {
+                logger.debug("Sending hero picks request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
             }
-            guard let body = body else {
-                continuation.resume(returning: nil)
-                return
-            }
-            let http = Http(url: "\(HSReplay.tier7DuosHeroPickStatsUrl)")
-            _ = http.uploadPromise(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body).done { response in
-                guard let data = response as? Data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                logger.debug("Response: \(String(data: data, encoding: .utf8) ?? "FAILED")")
-                let bqs: BattlegroundsHeroPickStats? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: bqs)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        } catch {
+            logger.error(error)
         }
+        guard let body = body else {
+            return nil
+        }
+        let http = Http(url: "\(HSReplay.tier7DuosHeroPickStatsUrl)")
+        guard let data = await http.uploadAsync(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body) else {
+            return nil
+        }
+        logger.debug("Response: \(String(data: data, encoding: .utf8) ?? "FAILED")")
+        let bqs: BattlegroundsHeroPickStats? = parseResponse(data: data, defaultValue: nil)
+        return bqs
     }
     
     static func getTier7QuestStats(parameters: BattlegroundsQuestPickParams) async -> [BattlegroundsQuestStats]? {
@@ -669,35 +633,26 @@ class HSReplayAPI {
         guard let token = token else {
             return nil
         }
-        return await withCheckedContinuation { continuation in
-            let encoder = JSONEncoder()
-            var body: Data?
-            do {
-                body = try encoder.encode(parameters)
-                if let body = body {
-                    logger.debug("Sending quest rewards request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
-                }
-            } catch {
-                logger.error(error)
+        let encoder = JSONEncoder()
+        var body: Data?
+        do {
+            body = try encoder.encode(parameters)
+            if let body = body {
+                logger.debug("Sending quest rewards request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
             }
-            guard let body = body else {
-                continuation.resume(returning: nil)
-                return
-            }
-            let http = Http(url: "\(HSReplay.tier7QuestStatsUrl)")
-            _ = http.uploadPromise(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body).done { response in
-                guard let data = response as? Data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                logger.debug("Response: \(String(data: data, encoding: .utf8) ?? "FAILED")")
-                let bqs: [BattlegroundsQuestStats]? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: bqs)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        } catch {
+            logger.error(error)
         }
+        guard let body = body else {
+            return nil
+        }
+        let http = Http(url: "\(HSReplay.tier7QuestStatsUrl)")
+        guard let data = await http.uploadAsync(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body) else {
+            return nil
+        }
+        logger.debug("Response: \(String(data: data, encoding: .utf8) ?? "FAILED")")
+        let bqs: [BattlegroundsQuestStats]? = parseResponse(data: data, defaultValue: nil)
+        return bqs
     }
     
     static func getAllTimeBGsMMR(hi: Int64, lo: Int) async -> Tier7AllTime? {
@@ -827,35 +782,26 @@ class HSReplayAPI {
         guard let token else {
             return nil
         }
-        return await withCheckedContinuation { continuation in
-            let encoder = JSONEncoder()
-            var body: Data?
-            do {
-                body = try encoder.encode(parameters)
-                if let body = body {
-                    logger.debug("Sending mulligan guide v2 data request (trial): \(String(data: body, encoding: .utf8) ?? "ERROR")")
-                }
-            } catch {
-                logger.error(error)
+        let encoder = JSONEncoder()
+        var body: Data?
+        do {
+            body = try encoder.encode(parameters)
+            if let body = body {
+                logger.debug("Sending mulligan guide v2 data request (trial): \(String(data: body, encoding: .utf8) ?? "ERROR")")
             }
-            guard let body = body else {
-                continuation.resume(returning: nil)
-                return
-            }
-            let http = Http(url: "\(HSReplay.constructedMulliganGuideV2)")
-            _ = http.uploadPromise(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body).done { response in
-                guard let data = response as? Data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                logger.debug("Response data (trial): \(String(data: data, encoding: .utf8) ?? "FAILED")")
-                let bqs: MulliganV2Data? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: bqs)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        } catch {
+            logger.error(error)
         }
+        guard let body = body else {
+            return nil
+        }
+        let http = Http(url: "\(HSReplay.constructedMulliganGuideV2)")
+        guard let data = await http.uploadAsync(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body) else {
+            return nil
+        }
+        logger.debug("Response data (trial): \(String(data: data, encoding: .utf8) ?? "FAILED")")
+        let bqs: MulliganV2Data? = parseResponse(data: data, defaultValue: nil)
+        return bqs
     }
 
     // ApiWrapper.PostBattlegroundsTavernPoolObservation: fire and forget, with
@@ -980,35 +926,26 @@ class HSReplayAPI {
         guard let token = token else {
             return nil
         }
-        return await withCheckedContinuation { continuation in
-            let encoder = JSONEncoder()
-            var body: Data?
-            do {
-                body = try encoder.encode(parameters)
-                if let body = body {
-                    logger.debug("Sending quest rewards request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
-                }
-            } catch {
-                logger.error(error)
+        let encoder = JSONEncoder()
+        var body: Data?
+        do {
+            body = try encoder.encode(parameters)
+            if let body = body {
+                logger.debug("Sending quest rewards request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
             }
-            guard let body = body else {
-                continuation.resume(returning: nil)
-                return
-            }
-            let http = Http(url: "\(HSReplay.tier7CompStatsUrl)")
-            _ = http.uploadPromise(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body).done { response in
-                guard let data = response as? Data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                logger.debug("Response: \(String(data: data, encoding: .utf8) ?? "FAILED")")
-                let bqs: BattlegroundsCompStats? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: bqs)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        } catch {
+            logger.error(error)
         }
+        guard let body = body else {
+            return nil
+        }
+        let http = Http(url: "\(HSReplay.tier7CompStatsUrl)")
+        guard let data = await http.uploadAsync(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body) else {
+            return nil
+        }
+        logger.debug("Response: \(String(data: data, encoding: .utf8) ?? "FAILED")")
+        let bqs: BattlegroundsCompStats? = parseResponse(data: data, defaultValue: nil)
+        return bqs
     }
     
     // Mirrors BattlegroundsInspirationViewModel.MakeRequest. Two variants, as
@@ -1042,33 +979,24 @@ class HSReplayAPI {
         guard let token else {
             return nil
         }
-        return await withCheckedContinuation { continuation in
-            var body: Data?
-            do {
-                body = try JSONEncoder().encode(parameters)
-                if let body {
-                    logger.debug("Sending inspiration request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
-                }
-            } catch {
-                logger.error(error)
+        var body: Data?
+        do {
+            body = try JSONEncoder().encode(parameters)
+            if let body {
+                logger.debug("Sending inspiration request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
             }
-            guard let body else {
-                continuation.resume(returning: nil)
-                return
-            }
-            let http = Http(url: "\(HSReplay.battlegroundsInspirationUrl)")
-            _ = http.uploadPromise(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body).done { response in
-                guard let data = response as? Data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let inspiration: BattlegroundsInspiration? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: inspiration)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        } catch {
+            logger.error(error)
         }
+        guard let body else {
+            return nil
+        }
+        let http = Http(url: "\(HSReplay.battlegroundsInspirationUrl)")
+        guard let data = await http.uploadAsync(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body) else {
+            return nil
+        }
+        let inspiration: BattlegroundsInspiration? = parseResponse(data: data, defaultValue: nil)
+        return inspiration
     }
 
     // Builds the query string by hand (rather than passing a parameters dict
@@ -1077,34 +1005,29 @@ class HSReplayAPI {
     // "&minion_types={type}" in a loop) - instead of relying on either
     // library's own array-parameter serialization, which isn't guaranteed to
     // produce the same wire format.
-    private static func compGuidesQuery(gameLanguage: String, minionTypes: [Int]) -> String {
+    private static func compGuidesQuery(gameLanguage: String, minionTypes: [Int], deityDbfId: Int?) -> String {
         var query = "?game_language=\(gameLanguage)"
         for type in minionTypes {
             query += "&minion_types=\(type)"
+        }
+        if let deityDbfId {
+            query += "&deity_dbf_id=\(deityDbfId)"
         }
         return query
     }
 
     static func getCompGuides(gameLanguage: String) async -> BattlegroundsCompGuidesData? {
-        return await withCheckedContinuation { continuation in
-            let http = Http(url: "\(HSReplay.compGuidesUrl)?game_language=\(gameLanguage)")
-            _ = http.getPromise(method: .get).done { data in
-                guard let data = data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let guides: BattlegroundsCompGuidesData? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: guides)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        let http = Http(url: "\(HSReplay.compGuidesUrl)?game_language=\(gameLanguage)")
+        guard let data = await http.getAsync() else {
+            return nil
         }
+        let guides: BattlegroundsCompGuidesData? = parseResponse(data: data, defaultValue: nil)
+        return guides
     }
 
-    static func getTier7CompGuides(gameLanguage: String, minionTypes: [Int]) async -> BattlegroundsTier7CompGuidesData? {
+    static func getTier7CompGuides(gameLanguage: String, minionTypes: [Int], deityDbfId: Int?) async -> BattlegroundsTier7CompGuidesData? {
         return await withCheckedContinuation { continuation in
-            let url = "\(HSReplay.tier7CompGuidesUrl)\(compGuidesQuery(gameLanguage: gameLanguage, minionTypes: minionTypes))"
+            let url = "\(HSReplay.tier7CompGuidesUrl)\(compGuidesQuery(gameLanguage: gameLanguage, minionTypes: minionTypes, deityDbfId: deityDbfId))"
             startAuthorizedRequest(url, method: .GET, parameters: [:], completionHandler: { result in
                 switch result {
                 case .success(let response):
@@ -1120,25 +1043,17 @@ class HSReplayAPI {
         }
     }
 
-    static func getTier7CompGuides(token: String?, gameLanguage: String, minionTypes: [Int]) async -> BattlegroundsTier7CompGuidesData? {
+    static func getTier7CompGuides(token: String?, gameLanguage: String, minionTypes: [Int], deityDbfId: Int?) async -> BattlegroundsTier7CompGuidesData? {
         guard let token = token else {
             return nil
         }
-        return await withCheckedContinuation { continuation in
-            let url = "\(HSReplay.tier7CompGuidesUrl)\(compGuidesQuery(gameLanguage: gameLanguage, minionTypes: minionTypes))"
-            let http = Http(url: url)
-            _ = http.getPromise(method: .get, headers: ["X-Trial-Token": token]).done { data in
-                guard let data = data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let guides: BattlegroundsTier7CompGuidesData? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: guides)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        let url = "\(HSReplay.tier7CompGuidesUrl)\(compGuidesQuery(gameLanguage: gameLanguage, minionTypes: minionTypes, deityDbfId: deityDbfId))"
+        let http = Http(url: url)
+        guard let data = await http.getAsync(headers: ["X-Trial-Token": token]) else {
+            return nil
         }
+        let guides: BattlegroundsTier7CompGuidesData? = parseResponse(data: data, defaultValue: nil)
+        return guides
     }
 
     // MARK: - Arenasmith
@@ -1185,40 +1100,24 @@ class HSReplayAPI {
             }
         }
 
-        return await withCheckedContinuation { continuation in
-            let http = Http(url: url)
-            _ = http.uploadPromise(method: .post, headers: ["Content-Type": "application/json"], data: body).done { response in
-                guard let data = response as? Data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                if logResponse {
-                    logger.debug("Arena response from \(url): \(String(data: data, encoding: .utf8) ?? "ERROR")")
-                }
-                let parsed: R? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: parsed)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        let http = Http(url: url)
+        guard let data = await http.uploadAsync(method: .post, headers: ["Content-Type": "application/json"], data: body) else {
+            return nil
         }
+        if logResponse {
+            logger.debug("Arena response from \(url): \(String(data: data, encoding: .utf8) ?? "ERROR")")
+        }
+        let parsed: R? = parseResponse(data: data, defaultValue: nil)
+        return parsed
     }
 
     private static func getArenaJson<R: Decodable>(url: String, as: R.Type) async -> R? {
-        return await withCheckedContinuation { continuation in
-            let http = Http(url: url)
-            _ = http.getPromise(method: .get).done { data in
-                guard let data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let parsed: R? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: parsed)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        let http = Http(url: url)
+        guard let data = await http.getAsync() else {
+            return nil
         }
+        let parsed: R? = parseResponse(data: data, defaultValue: nil)
+        return parsed
     }
 
     static func getArenaHeroPickStats(parameters: ArenaHeroPickParams) async -> ArenaHeroPickApiResponse? {
@@ -1292,88 +1191,48 @@ class HSReplayAPI {
         guard let token = token else {
             return nil
         }
-        return await withCheckedContinuation { continuation in
-            let http = Http(url: HSReplay.discoverPoolKeywordsUrl)
-            _ = http.getPromise(method: .get, headers: ["X-Trial-Token": token]).done { data in
-                guard let data = data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let keywords: [String: [String]]? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: keywords)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        let http = Http(url: HSReplay.discoverPoolKeywordsUrl)
+        guard let data = await http.getAsync(headers: ["X-Trial-Token": token]) else {
+            return nil
         }
+        let keywords: [String: [String]]? = parseResponse(data: data, defaultValue: nil)
+        return keywords
     }
 
     static func getHeroGuides(gameLanguage: String) async -> BattlegroundsHeroGuidesData? {
-        return await withCheckedContinuation { continuation in
-            let http = Http(url: "\(HSReplay.heroGuidesUrl)?game_language=\(gameLanguage)")
-            _ = http.getPromise(method: .get).done { data in
-                guard let data = data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let guides: BattlegroundsHeroGuidesData? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: guides)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        let http = Http(url: "\(HSReplay.heroGuidesUrl)?game_language=\(gameLanguage)")
+        guard let data = await http.getAsync() else {
+            return nil
         }
+        let guides: BattlegroundsHeroGuidesData? = parseResponse(data: data, defaultValue: nil)
+        return guides
     }
 
     static func getTrinketGuides(gameLanguage: String) async -> BattlegroundsTrinketGuidesData? {
-        return await withCheckedContinuation { continuation in
-            let http = Http(url: "\(HSReplay.trinketGuidesUrl)?game_language=\(gameLanguage)")
-            _ = http.getPromise(method: .get).done { data in
-                guard let data = data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let guides: BattlegroundsTrinketGuidesData? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: guides)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        let http = Http(url: "\(HSReplay.trinketGuidesUrl)?game_language=\(gameLanguage)")
+        guard let data = await http.getAsync() else {
+            return nil
         }
+        let guides: BattlegroundsTrinketGuidesData? = parseResponse(data: data, defaultValue: nil)
+        return guides
     }
 
     static func getAnomalyGuides(gameLanguage: String) async -> BattlegroundsAnomalyGuidesData? {
-        return await withCheckedContinuation { continuation in
-            let http = Http(url: "\(HSReplay.anomalyGuidesUrl)?game_language=\(gameLanguage)")
-            _ = http.getPromise(method: .get).done { data in
-                guard let data = data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let guides: BattlegroundsAnomalyGuidesData? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: guides)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        let http = Http(url: "\(HSReplay.anomalyGuidesUrl)?game_language=\(gameLanguage)")
+        guard let data = await http.getAsync() else {
+            return nil
         }
+        let guides: BattlegroundsAnomalyGuidesData? = parseResponse(data: data, defaultValue: nil)
+        return guides
     }
 
     static func getQuestGuides(gameLanguage: String) async -> BattlegroundsQuestGuidesData? {
-        return await withCheckedContinuation { continuation in
-            let http = Http(url: "\(HSReplay.questGuidesUrl)?game_language=\(gameLanguage)")
-            _ = http.getPromise(method: .get).done { data in
-                guard let data = data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                let guides: BattlegroundsQuestGuidesData? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: guides)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        let http = Http(url: "\(HSReplay.questGuidesUrl)?game_language=\(gameLanguage)")
+        guard let data = await http.getAsync() else {
+            return nil
         }
+        let guides: BattlegroundsQuestGuidesData? = parseResponse(data: data, defaultValue: nil)
+        return guides
     }
 
     static func getTier7TrinketPickStats(parameters: BattlegroundsTrinketPickParams) async -> BattlegroundsTrinketPickStats? {
@@ -1408,33 +1267,98 @@ class HSReplayAPI {
         guard let token = token else {
             return nil
         }
-        return await withCheckedContinuation { continuation in
-            let encoder = JSONEncoder()
-            var body: Data?
-            do {
-                body = try encoder.encode(parameters)
-                if let body = body {
-                    logger.debug("Sending trinket pick request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
-                }
-            } catch {
-                logger.error(error)
+        let encoder = JSONEncoder()
+        var body: Data?
+        do {
+            body = try encoder.encode(parameters)
+            if let body = body {
+                logger.debug("Sending trinket pick request: \(String(data: body, encoding: .utf8) ?? "ERROR")")
             }
-            guard let body = body else {
-                continuation.resume(returning: nil)
-                return
-            }
-            let http = Http(url: "\(HSReplay.tier7TrinketPickStats)")
-            _ = http.uploadPromise(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body).done { response in
-                guard let data = response as? Data else {
-                    continuation.resume(returning: nil)
-                    return
-                }
-                logger.debug("Response: \(String(data: data, encoding: .utf8) ?? "FAILED")")
-                let bqs: BattlegroundsTrinketPickStats? = parseResponse(data: data, defaultValue: nil)
-                continuation.resume(returning: bqs)
-            }.catch { error in
-                logger.error(error)
-                continuation.resume(returning: nil)
-            }
+        } catch {
+            logger.error(error)
         }
+        guard let body = body else {
+            return nil
+        }
+        let http = Http(url: "\(HSReplay.tier7TrinketPickStats)")
+        guard let data = await http.uploadAsync(method: .post, headers: ["Content-Type": "application/json", "X-Trial-Token": token], data: body) else {
+            return nil
+        }
+        logger.debug("Response: \(String(data: data, encoding: .utf8) ?? "FAILED")")
+        let bqs: BattlegroundsTrinketPickStats? = parseResponse(data: data, defaultValue: nil)
+        return bqs
     }}
+
+// HDT's OAuthTokenRefresher: the server replaces the access token in place on refresh, so refreshes must
+// never overlap. Callers arriving while a refresh is in flight wait for that one instead of starting another.
+final class OAuthTokenRefresher {
+    private static let tokenRefreshMargin: TimeInterval = 5 * 60
+    private static let lock = NSLock()
+    private static var waiters: [(Bool) -> Void]?
+
+    // Without an expiration there is no token to refresh (e.g. not signed in).
+    private static var isFresh: Bool {
+        guard let expiration = Settings.hsReplayOAuthTokenExpiration else {
+            return true
+        }
+        return expiration.timeIntervalSince(Date()) > tokenRefreshMargin
+    }
+
+    static func ensureFresh(_ completion: @escaping (Bool) -> Void) {
+        if isFresh {
+            completion(true)
+            return
+        }
+        logger.debug("OAuth token is about to expire, renewing")
+        refresh(completion)
+    }
+
+    static func refreshRejected(_ rejectedAccessToken: String, _ completion: @escaping (Bool) -> Void) {
+        lock.lock()
+        let isRefreshing = waiters != nil
+        lock.unlock()
+        if !isRefreshing && HSReplayAPI.oauthswift.client.credential.oauthToken != rejectedAccessToken {
+            logger.info("Rejected access token was already replaced")
+            completion(true)
+            return
+        }
+        refresh(completion)
+    }
+
+    static func refresh(_ completion: @escaping (Bool) -> Void) {
+        lock.lock()
+        if waiters != nil {
+            waiters?.append(completion)
+            lock.unlock()
+            return
+        }
+        waiters = [completion]
+        lock.unlock()
+
+        HSReplayAPI.oauthswift.renewAccessToken(withRefreshToken: HSReplayAPI.oauthswift.client.credential.oauthRefreshToken, completionHandler: { result in
+            var success = false
+            switch result {
+            case .success(let (credential, _, parameters)):
+                logger.debug("HSReplay: Refreshed OAuthToken")
+                Settings.hsReplayOAuthToken = credential.oauthToken
+                Settings.hsReplayOAuthRefreshToken = credential.oauthRefreshToken
+                Settings.hsReplayOAuthTokenExpiration = credential.oauthTokenExpiresAt
+                if let scope = parameters["scope"] as? String {
+                    Settings.hsReplayOAuthScope = scope
+                }
+                HSReplayAPI.updateOAuthCredential()
+                success = true
+            case .failure(let error):
+                logger.error("Failed to renew token: \(error)")
+            }
+
+            lock.lock()
+            let pending = waiters ?? []
+            waiters = nil
+            lock.unlock()
+            for waiter in pending {
+                waiter(success)
+            }
+        })
+    }
+}

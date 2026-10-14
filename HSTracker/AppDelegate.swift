@@ -149,17 +149,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegat
         if refresh {
             logger.debug("OAuth token is expired, renewing")
             
-            HSReplayAPI.oauthswift.renewAccessToken(withRefreshToken: credential.oauthRefreshToken, completionHandler: { result in
-                switch result {
-                case .success(let (credential, _, parameters)):
-                    logger.debug("HSReplay: Refreshed OAuthToken")
-                    Settings.hsReplayOAuthToken =  credential.oauthToken
-                    Settings.hsReplayOAuthRefreshToken = credential.oauthRefreshToken
-                    Settings.hsReplayOAuthTokenExpiration = credential.oauthTokenExpiresAt
-                    Settings.hsReplayOAuthScope = parameters["scope"] as? String
-                    HSReplayAPI.updateOAuthCredential()
-                    HSReplayAPI.getAccount().done { result in
-                        switch result {
+            OAuthTokenRefresher.refresh { success in
+                if success {
+                    Task { @MainActor in
+                        switch await HSReplayAPI.getAccount() {
                         case .failed:
                             logger.error("Failed to retrieve account data")
                         case .success(account: let data):
@@ -170,16 +163,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegat
                             }
                             logger.info("Successfully retrieved account data: Username: \(data.username), battletag: \(data.battletag)")
                         }
-                    }.catch { error in
-                        logger.error(error)
                     }
-                case .failure(let error):
-                    logger.error(error)
                 }
-            })
+            }
         } else {
-            _ = HSReplayAPI.getAccount().done { result in
-                switch result {
+            Task { @MainActor in
+                switch await HSReplayAPI.getAccount() {
                 case .failed:
                     logger.error("Failed to retrieve account data")
                 case .success(account: let data):
@@ -368,6 +357,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegat
             // crashes we can actually act on. The calls themselves already handle a
             // failed response by logging it and carrying on.
             options.enableCaptureFailedRequests = false
+
+            // NSAlert.runModal() - ours or Sparkle's - spins the main run loop
+            // in the modal panel mode, which never drains the main dispatch
+            // queue, so the hang tracker reports the whole time an alert sits
+            // waiting for the user as a hang (HSTRACKER-MH, HSTRACKER-2QE,
+            // HSTRACKER-26Z). The event is captured while the main thread is
+            // still in that loop, and CFRunLoop is safe to query from another
+            // thread; the stack frames themselves aren't symbolicated on
+            // device, so they can't be matched instead.
+            options.beforeSend = { event in
+                if event.exceptions?.first?.mechanism?.type == "AppHang",
+                   let mode = CFRunLoopCopyCurrentMode(CFRunLoopGetMain()),
+                   mode.rawValue as String == RunLoop.Mode.modalPanel.rawValue {
+                    return nil
+                }
+                return event
+            }
 
             // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
             // We recommend adjusting this value in production.
@@ -838,9 +844,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegat
         windowMove?.showWindow(self)
     }
     #endif
-    
-    @IBAction func closeWindow(_ sender: AnyObject) {
-    }
     
     @IBAction func openLogDirectory(_ sender: AnyObject) {
         NSWorkspace.shared.activateFileViewerSelecting([Paths.logs])

@@ -249,6 +249,8 @@ class Database {
             currentCard?.costFrost = intValue
         case GameTag.cost_unholy.rawValue:
             currentCard?.costUnholy = intValue
+        case GameTag.old_god.rawValue:
+            currentCard?.isOldGod = intValue > 0
         case GameTag.multiple_classes.rawValue:
             currentCard?.multipleClasses = intValue
         case GameTag.bacon_triple_upgrade_minion_id.rawValue:
@@ -272,6 +274,8 @@ class Database {
             }
         case GameTag.bacon_heropower_base_hero_id.rawValue:
             currentCard?.baconHeroPowerBaseHeroId = intValue
+        case GameTag.hero_power.rawValue:
+            currentCard?.heroPowerDbfId = intValue
         case GameTag.kabal.rawValue, GameTag.grimy_goons.rawValue, GameTag.jade_lotus.rawValue, GameTag.protoss.rawValue, GameTag.terran.rawValue, GameTag.zerg.rawValue:
             if intValue > 0 {
                 currentCard?.faction = GameTag(rawValue: id)
