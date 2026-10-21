@@ -372,7 +372,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegat
                    mode.rawValue as String == RunLoop.Mode.modalPanel.rawValue {
                     return nil
                 }
-                return event
+                // BobsBuddy failures carry the .NET stacktrace on their exception; the SDK
+                // also attaches the current Swift threads to every event with an exception,
+                // which Sentry would show instead. Only beforeSend runs late enough to
+                // remove them.
+                return BobsBuddySimulationFailure.stripNativeThreads(from: event)
             }
 
             // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
@@ -476,6 +480,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegat
             self.operationQueue.addOperations(operations, waitUntilFinished: true)
                         // remove any old feed URL to fix users not getting notified of updates
             UserDefaults.standard.removeObject(forKey: "SUFeedURL")
+            // the Tavern Pinning panel expansion used to be saved on every toggle
+            UserDefaults.standard.removeObject(forKey: "tavern_markers_panel_expanded")
             
             DispatchQueue.main.async {
                 self.completeSetup()

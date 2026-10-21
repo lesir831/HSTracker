@@ -1,3 +1,29 @@
+# 3.7.1
+## New
+- Simplified Chinese translations (thanks @j20120307)
+## Hearthstone
+- Assembled cards now show the related cards and deck highlights of their effect half.
+- Hovering a half or the target on the Assemble screen now shows its related cards and highlights the deck.
+- Fixed multi-class Tavern Brawl heroes not being recognized as their class.
+## Battlegrounds
+- Tavern Pinning is now free for individual minions and minion types. Recommending key pieces and pinning a whole comp remain Tier7 features.
+- The Tavern Pinning panel no longer starts expanded and no longer remembers being toggled.
+- The minion browser now shows Tavern Tier 7 when Greedy Conniver is in the minion pool.
+- Tier7 Comp Guides now take the anomaly into account, and pinning a comp pins the minions HSReplay.net recommends for it.
+- The hero panel now stays open when clicked and updates when you reroll heroes.
+- Tier7 trial status is now refreshed when returning to the menu, so a trial can start in a match queued straight from the menu.
+- Hero names in the session's latest games can now use per-language short names.
+- The Quest Picking overlay now matches the style of the other Tier7 picking overlays and no longer shows first place compositions.
+- Fixed the minion browser's Inspiration buttons showing in the pre-lobby.
+- Fixed the Quest Picking overlay not appearing for Sire Denathrius.
+- Fixed Tier7 Comp Guides sometimes listing compositions whose minion types are not in the lobby.
+## Bob's Buddy
+- Fixed combat odds when Resistance or Hostility is on a magnetized minion.
+- Fixed combat odds for the opponent's Timewarped Embalmer with no charges left.
+- Fixed combat odds for a golden Timewarped Nellie's Ship.
+## Arena
+- Fixed Arenasmith's redraft discard suggestions not showing on the Underground Arena deck editing screen.
+
 # 3.7.0
 **Updated for Hearthstone 37.0.0**
 ## New

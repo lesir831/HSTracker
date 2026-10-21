@@ -90,8 +90,10 @@ class HSReplayAPI {
                 case .failure(let error):
                     logger.info("HSReplay: OAuth failed \(error)")
                     DispatchQueue.main.async {
-                        if showLoginFailedMessage(error) {
-                            oAuthAuthorize(handle: handle)
+                        showLoginFailedMessage(error) { tryAgain in
+                            if tryAgain {
+                                oAuthAuthorize(handle: handle)
+                            }
                         }
                     }
                 }
@@ -101,10 +103,10 @@ class HSReplayAPI {
 
     // HDT's ShowLoginFailedMessage. There is no callback listener to fail here -
     // the browser hands the code back through the hstracker:// URL scheme - so
-    // only its "cancelled" and "server" descriptions apply. Returns true when the
-    // user asks to try again.
+    // only its "cancelled" and "server" descriptions apply. Calls `completion`
+    // with true when the user asks to try again.
     @MainActor
-    private static func showLoginFailedMessage(_ error: OAuthSwiftError) -> Bool {
+    private static func showLoginFailedMessage(_ error: OAuthSwiftError, completion: @escaping (Bool) -> Void) {
         let description: String
         switch error {
         case .cancelled, .accessDenied:
@@ -118,9 +120,20 @@ class HSReplayAPI {
         alert.informativeText = String.localizedString(description, comment: "")
         alert.addButton(withTitle: String.localizedString("MessageDialogs_LoginFailed_Button_TryAgain", comment: ""))
         alert.addButton(withTitle: String.localizedString("MessageDialogs_LoginFailed_Button_Close", comment: ""))
-        // the browser has focus after the login redirect
-        NSApp.activate(ignoringOtherApps: true)
-        return alert.runModal() == .alertFirstButtonReturn
+        // A sheet on the settings window the login was started from, rather than
+        // runModal(), which stalls the main queue until it is dismissed
+        // (Sentry HSTRACKER-MH). Showing the pane also brings the app back in
+        // front of the browser, which has focus after the login redirect, and
+        // reopens the window if it was closed in the meantime.
+        let preferences = AppDelegate.instance().preferences
+        preferences.show(preferencePane: .hsreplay)
+        guard let window = preferences.window else {
+            alert.showNonModal { completion($0 == .alertFirstButtonReturn) }
+            return
+        }
+        alert.beginSheetModal(for: window) { response in
+            completion(response == .alertFirstButtonReturn)
+        }
     }
     
     static func updateOAuthCredential() {
@@ -999,23 +1012,6 @@ class HSReplayAPI {
         return inspiration
     }
 
-    // Builds the query string by hand (rather than passing a parameters dict
-    // to startAuthorizedRequest/Http) so `minion_types` can be repeated once
-    // per value - matching the HSReplayNET client exactly (it appends
-    // "&minion_types={type}" in a loop) - instead of relying on either
-    // library's own array-parameter serialization, which isn't guaranteed to
-    // produce the same wire format.
-    private static func compGuidesQuery(gameLanguage: String, minionTypes: [Int], deityDbfId: Int?) -> String {
-        var query = "?game_language=\(gameLanguage)"
-        for type in minionTypes {
-            query += "&minion_types=\(type)"
-        }
-        if let deityDbfId {
-            query += "&deity_dbf_id=\(deityDbfId)"
-        }
-        return query
-    }
-
     static func getCompGuides(gameLanguage: String) async -> BattlegroundsCompGuidesData? {
         let http = Http(url: "\(HSReplay.compGuidesUrl)?game_language=\(gameLanguage)")
         guard let data = await http.getAsync() else {
@@ -1025,9 +1021,9 @@ class HSReplayAPI {
         return guides
     }
 
-    static func getTier7CompGuides(gameLanguage: String, minionTypes: [Int], deityDbfId: Int?) async -> BattlegroundsTier7CompGuidesData? {
+    static func getTier7CompGuides(parameters: BattlegroundsCompGuidesParams) async -> BattlegroundsTier7CompGuidesData? {
         return await withCheckedContinuation { continuation in
-            let url = "\(HSReplay.tier7CompGuidesUrl)\(compGuidesQuery(gameLanguage: gameLanguage, minionTypes: minionTypes, deityDbfId: deityDbfId))"
+            let url = "\(HSReplay.tier7CompGuidesUrl)\(parameters.queryString)"
             startAuthorizedRequest(url, method: .GET, parameters: [:], completionHandler: { result in
                 switch result {
                 case .success(let response):
@@ -1043,11 +1039,11 @@ class HSReplayAPI {
         }
     }
 
-    static func getTier7CompGuides(token: String?, gameLanguage: String, minionTypes: [Int], deityDbfId: Int?) async -> BattlegroundsTier7CompGuidesData? {
+    static func getTier7CompGuides(token: String?, parameters: BattlegroundsCompGuidesParams) async -> BattlegroundsTier7CompGuidesData? {
         guard let token = token else {
             return nil
         }
-        let url = "\(HSReplay.tier7CompGuidesUrl)\(compGuidesQuery(gameLanguage: gameLanguage, minionTypes: minionTypes, deityDbfId: deityDbfId))"
+        let url = "\(HSReplay.tier7CompGuidesUrl)\(parameters.queryString)"
         let http = Http(url: url)
         guard let data = await http.getAsync(headers: ["X-Trial-Token": token]) else {
             return nil

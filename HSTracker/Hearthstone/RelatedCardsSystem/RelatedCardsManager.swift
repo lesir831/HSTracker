@@ -65,6 +65,54 @@ class RelatedCardsManager {
         }
     }
     
+    /// The card id whose related cards, pool and highlights apply to `entity`.
+    ///
+    /// An assembled card is built from two halves: a trigger (CRAFTABLE_FIRST_HALF_DBID) and an
+    /// effect (CRAFTABLE_SECOND_HALF_DBID), each the dbf id of the card the half was taken from.
+    /// The effect half decides what the card generates or synergizes with, so it is resolved
+    /// against that card rather than the assembled card's own id. Values of 1 or less are not
+    /// cards: no half, or a half still on offer.
+    static func getEffectCardId(_ entity: Entity?, _ cardId: String) -> String {
+        // Hover entities are looked up by zone position, which is not always reliable.
+        guard let entity, entity.cardId == cardId else {
+            return cardId
+        }
+        let effectDbfId = entity[.craftable_second_half_dbid]
+        if effectDbfId <= 1 {
+            return cardId
+        }
+        return Cards.by(dbfId: effectDbfId, collectible: false)?.id ?? cardId
+    }
+
+    /// The choice entity behind one half button on the Assemble screen.
+    ///
+    /// Each half of an offered card is its own choice entity. It is marked by setting the half it
+    /// does not provide to 1: CRAFTABLE_SECOND_HALF_DBID = 1 offers the trigger (first half),
+    /// CRAFTABLE_FIRST_HALF_DBID = 1 offers the effect (second half).
+    ///
+    /// - Parameters:
+    ///   - choiceIndex: The offered card, left to right.
+    ///   - half: 1 for the trigger half, 2 for the effect half.
+    static func getAssembleChoice(_ choices: [Entity], _ choiceIndex: Int, _ half: Int) -> Entity? {
+        guard choiceIndex >= 0, half == 1 || half == 2 else {
+            return nil
+        }
+        let marker: GameTag = half == 1 ? .craftable_second_half_dbid : .craftable_first_half_dbid
+        return choices.filter { $0[marker] == 1 }.dropFirst(choiceIndex).first
+    }
+
+    /// The card id whose related cards apply to the card that picking `choice` would assemble.
+    /// An effect half brings its own effect; a trigger half keeps the target's.
+    static func getAssembleChoiceEffectCardId(_ choice: Entity, _ target: Entity?) -> String? {
+        if choice[.craftable_second_half_dbid] != 1 {
+            return choice.cardId
+        }
+        guard let targetCardId = target?.cardId, !targetCardId.isEmpty else {
+            return nil
+        }
+        return getEffectCardId(target, targetCardId)
+    }
+
     public func getCardWithHighlight(_ cardId: String) -> ICardWithHighlight? {
         return highlightCards[cardId]
     }
