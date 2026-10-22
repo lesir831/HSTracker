@@ -82,8 +82,10 @@ quest estimates and leaving authoritative snapshots unchanged.
   and settlement-only exceptions are in [QUESTS.md](QUESTS.md).
   The confirmed account value remains visible. These estimates are
   never persisted, never count opponent/spectator tags, and are discarded at
-  match end. Unknown quest IDs/quotas and completion-based quests stay on the
-  server snapshot with an explicit after-match label. Mode eligibility and the
+  match end. Ordinary completion-based quests and unknown quest IDs/quotas stay
+  on the server snapshot with an explicit after-match label. The supported event
+  match counter can retain a final-result estimate until the first post-game
+  snapshot. Mode eligibility and the
   final credited amount remain subject to server settlement. Open/enable the
   feature before the match; no opening baseline is invented mid-game.
 - Quest and achievement snapshots refresh after scene changes and match end;
@@ -324,11 +326,24 @@ translated prose as executable rules. Row heights include both text blocks.
 | 1924: Deathrattle/class; 1935: spell schools/set | Preserve attribute and class/set conditions |
 | 1921: cooperative Coin plays | Preserve co-op participation; do not substitute local-player totals |
 
-Event progress is **snapshot-based**, including all credit already calculated by
-the game. Local additive/multiplicative bonus estimation is not implemented;
-event rows explicitly bypass ordinary-quest estimates, even on a reused
-ID/quota. Match rows say that progress updates after settlement. A later server
-snapshot replaces the aggregate once, without multiplying or adding it again.
+Event progress keeps the confirmed snapshot and uses a separate explicit rule
+catalog for supported local estimates. As of 2026-10-07, the entire current
+event catalog (1956, 1957, 1986–1999; 16 objectives) has local counters,
+including additive mode, class, spell-school, keyword and expansion bonuses; see
+[QUESTS.md](QUESTS.md) for each condition. Draws pair cumulative counts with card
+movements and explicit burn metadata. Mana uses actual spending with PLAY-source
+attribution. Buffs group attack/health changes, full-hand detection respects the
+current capacity, and discoveries require completed selections. Match credit is
+estimated only after a final result and retained until the next authoritative
+post-game read, which can also reject an ineligible concession. Event rules
+require matching ID, quota and reward track 7, and run only
+in eligible traditional matches. They never reuse ordinary-quest estimates.
+Historical and unknown objectives outside this catalog stay on confirmed snapshots.
+A later server snapshot replaces the aggregate without adding its bonuses again.
+These are local estimates, not proof of server credit or live-match acceptance.
+Current-event validation: 37 probe-core tests and 77 selected app tests passed,
+including the Debug arm64 application build. This adaptation has not been
+installed or accepted in a real match.
 
 `HSTrackerTests/Fixtures/event-quests.zhCN.json` preserves all 1,194 event
 definitions from the previously collected public Firestone catalog, with source
@@ -340,10 +355,10 @@ The SwiftUI test renders production views to
 `/tmp/HSTracker-QuestOverlay-QA/events.png`; its native cadence/membership values
 are synthetic fixtures, not observed historical event assignments.
 
-No live event or real-game interface verification is performed for this
-extension: no event is currently available, and the user explicitly waived that
-step. Offline tests and rendering do not validate the event runtime reader or
-the game's bonus accounting in an active event.
+The earlier historical-catalog extension was verified offline when no event was
+available and the user waived live verification. Its offline tests and rendering
+did not validate the event runtime reader or the game's bonus accounting in an
+active event.
 
-Validation for this extension: 53 selected app tests and 22 probe-core tests
+Validation for that earlier extension: 53 selected app tests and 22 probe-core tests
 passed; Release build and strict application signature verification passed.

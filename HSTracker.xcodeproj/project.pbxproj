@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A1C0A0033000000100000001 /* AccountEventQuestLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0A0033000000100000002 /* AccountEventQuestLogTests.swift */; };
 		A1C0A0023000000100000001 /* Kanna in Frameworks */ = {isa = PBXBuildFile; productRef = A1C0A0023000000100000002 /* Kanna */; };
 		A1C0A0023000000100000004 /* HearthArenaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0A0023000000100000005 /* HearthArenaTests.swift */; };
 		A1C0A0013000000100000003 /* AccountProgressLifecycleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0A0013000000100000004 /* AccountProgressLifecycleTests.swift */; };
@@ -1988,6 +1989,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A1C0A0033000000100000002 /* AccountEventQuestLogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountEventQuestLogTests.swift; sourceTree = "<group>"; };
 		A1C0A0023000000100000005 /* HearthArenaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HearthArenaTests.swift; sourceTree = "<group>"; };
 		A1C0A0013000000100000004 /* AccountProgressLifecycleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountProgressLifecycleTests.swift; sourceTree = "<group>"; };
 		A1C0A0013000000100000006 /* AccountQuestOverlayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountQuestOverlayTests.swift; sourceTree = "<group>"; };
@@ -4362,6 +4364,7 @@
 				B8A1F0202FCD0020000A0020 /* CardTileThemeTests.swift */,
 				B8A1F0402FCD0040000A0040 /* OverlayWidgetPlacementTests.swift */,
 				A1C0A0013000000100000004 /* AccountProgressLifecycleTests.swift */,
+				A1C0A0033000000100000002 /* AccountEventQuestLogTests.swift */,
 				A1C0A0023000000100000005 /* HearthArenaTests.swift */,
 				A1C0A0013000000100000006 /* AccountQuestOverlayTests.swift */,
 				A1C0A0013000000100000008 /* AccountQuestMenuTests.swift */,
@@ -9111,6 +9114,7 @@
 				B8A1F0212FCD0021000A0021 /* CardTileThemeTests.swift in Sources */,
 				B8A1F0412FCD0041000A0041 /* OverlayWidgetPlacementTests.swift in Sources */,
 				A1C0A0013000000100000003 /* AccountProgressLifecycleTests.swift in Sources */,
+				A1C0A0033000000100000001 /* AccountEventQuestLogTests.swift in Sources */,
 				A1C0A0023000000100000004 /* HearthArenaTests.swift in Sources */,
 				A1C0A0013000000100000005 /* AccountQuestOverlayTests.swift in Sources */,
 				A1C0A0013000000100000007 /* AccountQuestMenuTests.swift in Sources */,

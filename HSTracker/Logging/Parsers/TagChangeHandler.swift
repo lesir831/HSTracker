@@ -48,17 +48,19 @@ class TagChangeHandler {
 
         if let entity = eventHandler.entities[id] {
             let prevValue = entity[tag]
+            // An explicit zero is different from an absent tag when callers
+            // fall back to CardDefs (e.g. a discounted cost or removed keyword).
+            entity[tag] = value
             if prevValue == value {
                 return
             }
-            entity[tag] = value
 
             if isCreationTag {
                 if let action = tagChangeAction.findAction(eventHandler: eventHandler,
                                                         tag: tag,
                                                         id: id,
                                                         value: value,
-                                                        prevValue: prevValue) {
+                                                        prevValue: prevValue, isCreationTag: true) {
                     entity.info.hasOutstandingTagChanges = true
                     creationTagActionQueue.append((id: id, action: action))
                 }

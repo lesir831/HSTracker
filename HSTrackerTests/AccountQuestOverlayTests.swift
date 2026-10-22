@@ -3,6 +3,26 @@ import XCTest
 @testable import HSTracker
 
 final class AccountQuestOverlayTests: XCTestCase {
+    func testCurrentEventRulesAppearOnlyForAssignedQuestsAndKeepBonusNotes() throws {
+        let catalog = try CurrentEventQuestFixtures.load()
+        let definitions = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
+        let frame = snapshot([quest(1956, 10), quest(1986, 5), quest(1957, 3), quest(1987, 2)])
+        var live = estimate(for: frame)
+        let context = AccountQuestEstimate.Context(ranked: true, playerClass: "warlock")
+        live.observe(.played(.init(type: 5, school: 6)), eventID: "cast", matchID: "match", isLocalPlayer: true, context: context)
+        live.observe(.summoned(.init(type: 4, keywords: ["DEATHRATTLE"])), eventID: "summon", matchID: "match", isLocalPlayer: true, context: context)
+        let rows = AccountQuestOverlayRow.rows(snapshot: frame, definitions: definitions,
+            estimate: live, hasVerifiedAccount: true)
+        XCTAssertEqual(rows.map(\.id), [1956, 1986, 1957, 1987])
+        XCTAssertEqual(rows.map(\.total), [14, 8, 3, 2])
+        XCTAssertEqual(rows.map(\.confirmed), [10, 5, 3, 2])
+        XCTAssertEqual(rows.map(\.estimatedDelta), [4, 3, 0, 0])
+        XCTAssertEqual(rows[0].detail, "（计数加成：排名对战+1，暗影+1，术士+1）")
+        XCTAssertEqual(rows[1].detail, "（计数加成：排名对战+1，亡语+1）")
+        XCTAssertTrue(AccountQuestOverlayRow.rows(snapshot: frame, definitions: definitions,
+            estimate: live, hasVerifiedAccount: true, showTraditional: false).isEmpty)
+    }
+
     func testHistoricalEventCatalogDisplaysOnlyAssignedQuestsAndPreservesAllConditions() throws {
         let catalog = try HistoricalEventQuestFixtures.load()
         XCTAssertEqual(catalog.count, 1194)
@@ -484,6 +504,14 @@ enum HistoricalEventQuestFixtures {
     static func load() throws -> [AccountQuestDefinition] {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("Fixtures/event-quests.zhCN.json")
+        return try JSONDecoder().decode(AccountQuestDefinitions.self, from: Data(contentsOf: url)).quests
+    }
+}
+
+enum CurrentEventQuestFixtures {
+    static func load() throws -> [AccountQuestDefinition] {
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Tools/AccountProgressProbe/Tests/ProgressProbeCoreTests/Fixtures/event-quests-20261007.json")
         return try JSONDecoder().decode(AccountQuestDefinitions.self, from: Data(contentsOf: url)).quests
     }
 }

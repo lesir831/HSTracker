@@ -21,6 +21,140 @@ final class AccountProgressLifecycleTests: XCTestCase {
 
     private let quest = AccountProgressRecord(id: 1035, progress: 176, status: 2)
 
+    func testCompletedEventGameRemainsAnEstimateUntilPostMatchSnapshot() async throws {
+        let definitions = Dictionary(uniqueKeysWithValues: try CurrentEventQuestFixtures.load().map { ($0.id, $0) })
+        let source = Source(metadataReading(quests: [.init(id: 1957, progress: 10, status: 2)]))
+        let model = AccountProgressModel(enabled: true, automaticallyPoll: false, persists: false,
+            definitions: definitions, reader: source.read)
+        model.beginMatch("event-result", spectator: false, questEligible: true)
+        await idle(model)
+        let overlay = AccountQuestOverlayViewModel(model: model)
+        let tracker = AccountQuestLogTracker()
+        let context = AccountQuestLogTracker.Context(playerID: 1, opponentID: 2, mulliganDone: true,
+            battlegrounds: false, combat: false, turn: 10, defenderID: 0, entity: { _ in nil })
+        for sample in tracker.matchEnded(result: .win, context: context) {
+            if case .action(let event, let id) = sample {
+                model.observeQuest(event, eventID: id, matchID: "event-result", context: .init(tavernBrawl: true))
+            }
+        }
+        model.endMatch(preservingCompletedEvent: true)
+        overlay.update()
+        XCTAssertNil(model.questEstimate.matchID)
+        XCTAssertEqual(overlay.rows.first?.total, 15)
+        XCTAssertEqual(overlay.rows.first?.confirmed, 10)
+        XCTAssertEqual(overlay.rows.first?.estimatedDelta, 5)
+        XCTAssertEqual(model.session.snapshot?.quests.first?.progress, 10)
+        // A corrected server result replaces the provisional number, even when lower.
+        source.set(metadataReading(quests: [.init(id: 1957, progress: 14, status: 2)]))
+        model.refresh(full: true)
+        await idle(model)
+        overlay.update()
+        XCTAssertEqual(overlay.rows.first?.total, 14)
+        XCTAssertNil(overlay.rows.first?.estimatedDelta)
+        model.beginMatch("next-event-result", spectator: false, questEligible: true)
+        await idle(model)
+        overlay.update()
+        XCTAssertEqual(overlay.rows.first?.total, 14)
+        XCTAssertEqual(overlay.rows.first?.estimatedDelta, 0)
+    }
+
+    func testCurrentEventLogBridgePublishesBonusesAndSettlesWithoutDoubleCounting() async throws {
+        let definitions = Dictionary(uniqueKeysWithValues: try CurrentEventQuestFixtures.load().map { ($0.id, $0) })
+        let quests = [AccountProgressRecord(id: 1956, progress: 10, status: 2), .init(id: 1986, progress: 5, status: 2)]
+        let native = try quests.map { quest -> AccountNativeQuestDefinition in
+            let item = try XCTUnwrap(definitions[quest.id])
+            return .init(id: item.id, name: item.name, description: item.description, quota: item.quota,
+                rewardTrackType: 7, questPoolID: item.id == 1956 ? 143 : 142, poolType: 3, isChainQuest: item.id == 1956)
+        }
+        let source = Source(metadataReading(quests: quests, definitions: native))
+        let model = AccountProgressModel(enabled: true, automaticallyPoll: false, persists: false,
+            definitions: definitions, reader: source.read)
+        model.beginMatch("current-event", spectator: false, questEligible: true)
+        await idle(model)
+        let overlay = AccountQuestOverlayViewModel(model: model)
+        let tracker = AccountQuestLogTracker()
+        let spellCard = Card(); spellCard.id = "EVENT_TEST_SHADOW"; spellCard.type = .spell; spellCard.spellSchool = .shadow
+        spellCard.playerClass = .priest // A stolen spell must not change the player's class bonus.
+        let minionCard = Card(); minionCard.id = "EVENT_TEST_DEATHRATTLE"; minionCard.type = .minion
+        minionCard.accountQuestKeywords = ["DEATHRATTLE"]
+        for card in [spellCard, minionCard] { Cards.cardsById[card.id] = card }
+        defer { for card in [spellCard, minionCard] { Cards.cardsById.removeValue(forKey: card.id) } }
+        let spell = Entity(id: 10); spell.cardId = spellCard.id
+        spell[.cardtype] = CardType.spell.rawValue; spell[.controller] = 1; spell[.zone] = Zone.hand.rawValue
+        let minion = Entity(id: 11); minion.cardId = minionCard.id
+        minion[.cardtype] = CardType.minion.rawValue; minion[.controller] = 1; minion[.zone] = Zone.setaside.rawValue
+        let entities = [10: spell, 11: minion]
+        let context = AccountQuestLogTracker.Context(playerID: 1, opponentID: 2, mulliganDone: true,
+            battlegrounds: false, combat: false, turn: 3, defenderID: 0, entity: { entities[$0] })
+        let bonus = AccountQuestLogBridge.context(gameType: .gt_ranked, playerClass: .warlock)
+        func publish(_ samples: [AccountQuestLogTracker.Sample]) {
+            for sample in samples {
+                switch sample {
+                case .action(let event, let id): model.observeQuest(event, eventID: id, matchID: "current-event", context: bonus)
+                case .cumulative(let metric, let total):
+                    model.observeQuest(metric, total: total, matchID: "current-event", isLocalPlayer: true, context: bonus)
+                }
+            }
+        }
+        let play = Block(parent: nil, id: 1, type: "PLAY", cardId: spellCard.id, target: nil, trigger: nil)
+        play.sourceEntityId = spell.id
+        publish(tracker.blockStarted(play, context: context))
+        spell[.zone] = Zone.play.rawValue
+        let spellSamples = tracker.tagChanged(.zone, entity: spell, value: Zone.play.rawValue,
+            previous: Zone.hand.rawValue, block: play, context: context)
+        publish(spellSamples); publish(spellSamples)
+        minion[.zone] = Zone.play.rawValue
+        let summoned = tracker.tagChanged(.zone, entity: minion, value: Zone.play.rawValue,
+            previous: Zone.setaside.rawValue, block: play, context: context)
+        publish(summoned); publish(summoned)
+        // Enemy summons and spells cannot advance either task.
+        minion[.controller] = 2
+        publish(tracker.tagChanged(.zone, entity: minion, value: Zone.play.rawValue,
+            previous: Zone.setaside.rawValue, block: nil, context: context))
+        spell[.controller] = 2; spell[.zone] = Zone.hand.rawValue
+        let enemyPlay = Block(parent: nil, id: 2, type: "PLAY", cardId: spellCard.id, target: nil, trigger: nil)
+        enemyPlay.sourceEntityId = spell.id
+        publish(tracker.blockStarted(enemyPlay, context: context))
+        publish(tracker.tagChanged(.zone, entity: spell, value: Zone.play.rawValue,
+            previous: Zone.hand.rawValue, block: enemyPlay, context: context))
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(overlay.rows.map(\.total), [14, 8])
+        XCTAssertEqual(overlay.rows.map(\.estimatedDelta), [4, 3])
+        XCTAssertEqual(model.session.snapshot?.quests.map(\.progress), [10, 5])
+        XCTAssertEqual(overlay.rows.first?.categoryKey, "AccountProgress_CategoryEventChain")
+        XCTAssertFalse(overlay.isExpanded) // Incoming event progress never opens the popup.
+        source.set(metadataReading(quests: [.init(id: 1956, progress: 14, status: 2), .init(id: 1986, progress: 8, status: 2)], definitions: native))
+        model.refresh(full: true)
+        await idle(model)
+        XCTAssertEqual(overlay.rows.map(\.total), [14, 8])
+        model.endMatch()
+        overlay.update()
+        XCTAssertEqual(overlay.rows.map(\.total), [14, 8])
+        XCTAssertTrue(overlay.rows.allSatisfy { $0.estimatedDelta == nil })
+    }
+
+    func testEventDeathrattleFactsRespectEntityOverridesAndRankedContext() {
+        let card = Card(); card.id = "EVENT_FACTS_DEATHRATTLE"; card.type = .minion
+        card.accountQuestKeywords = ["DEATHRATTLE"]
+        Cards.cardsById[card.id] = card
+        defer { Cards.cardsById.removeValue(forKey: card.id) }
+        let entity = Entity(id: 10); entity.cardId = card.id
+        card.cost = 10
+        XCTAssertEqual(AccountQuestLogBridge.facts(entity).cost, 10)
+        entity[.cost] = 0
+        XCTAssertEqual(AccountQuestLogBridge.facts(entity).cost, 0)
+        XCTAssertTrue(AccountQuestLogBridge.facts(entity).keywords.contains("DEATHRATTLE"))
+        entity[.deathrattle] = 0
+        XCTAssertFalse(AccountQuestLogBridge.facts(entity).keywords.contains("DEATHRATTLE"))
+        card.accountQuestKeywords = []
+        entity[.deathrattle] = 1
+        XCTAssertTrue(AccountQuestLogBridge.facts(entity).keywords.contains("DEATHRATTLE"))
+        XCTAssertTrue(AccountQuestLogBridge.context(gameType: .gt_ranked, playerClass: .warlock).ranked)
+        for type in [GameType.gt_casual, .gt_arena, .gt_tavernbrawl, .gt_battlegrounds] {
+            XCTAssertFalse(AccountQuestLogBridge.context(gameType: type, playerClass: .warlock).ranked)
+        }
+    }
+
     func testScreenshotObjectivesReceiveLogEventsAndSettleWithoutDoubleCounting() async throws {
         let quests = [AccountProgressRecord(id: 1834, progress: 8, status: 2),
                       .init(id: 1034, progress: 46, status: 2), .init(id: 1037, progress: 1, status: 2),
@@ -66,6 +200,12 @@ final class AccountProgressLifecycleTests: XCTestCase {
         let power = Block(parent: play, id: 2, type: "POWER", cardId: card.id, target: nil, trigger: nil)
         power.sourceEntityId = spell.id
         publish(tracker.tagChanged(.predamage, entity: hero, value: 6, previous: 0, block: power, context: context))
+        publish(tracker.tagChanged(.predamage, entity: hero, value: 0, previous: 6, block: power, context: context))
+        // Real logs clear PREDAMAGE before confirming the hit and applying it.
+        var metadata = AccountQuestDamageMetadata()
+        XCTAssertNil(metadata.read("META_DATA - Meta=DAMAGE Data=6 InfoCount=1"))
+        let damage = try XCTUnwrap(metadata.read("Info[0] = [entityName=Enemy id=20 zone=PLAY zonePos=0 cardId=HERO_01 player=2]"))
+        tracker.damageStarted(hero, amount: damage.amount, block: power, context: context)
         publish(tracker.tagChanged(.armor, entity: hero, value: 0, previous: 2, block: power, context: context))
         publish(tracker.tagChanged(.damage, entity: hero, value: 4, previous: 0, block: power, context: context))
         // Exercise the actual Combine publication path without a manual overlay.update().
@@ -110,8 +250,9 @@ final class AccountProgressLifecycleTests: XCTestCase {
             battlegrounds: false, combat: false, turn: 3, defenderID: 10, entity: { entities[$0] })
         func hit(_ block: Block?, landed: Bool) -> Int {
             _ = tracker.tagChanged(.predamage, entity: hero, value: 5, previous: 0, block: block, context: context)
-            let samples = landed ? tracker.tagChanged(.damage, entity: hero, value: 5, previous: 0, block: block, context: context) : []
             _ = tracker.tagChanged(.predamage, entity: hero, value: 0, previous: 5, block: block, context: context)
+            if landed { tracker.damageStarted(hero, amount: 5, block: block, context: context) }
+            let samples = landed ? tracker.tagChanged(.damage, entity: hero, value: 5, previous: 0, block: block, context: context) : []
             return samples.reduce(0) { total, sample in
                 if case .action(.add(.enemyHeroDamage, let value), _) = sample { return total + value }
                 return total
@@ -128,8 +269,41 @@ final class AccountProgressLifecycleTests: XCTestCase {
         XCTAssertEqual(hit(friendlySpell, landed: false), 0)
         XCTAssertEqual(hit(friendlySpell, landed: true), 5)
         XCTAssertEqual(hit(nil, landed: true), 0)
+        let fatigue = Block(parent: friendlySpell, id: 4, type: "FATIGUE", cardId: nil, target: nil, trigger: nil)
+        fatigue.sourceEntityId = defender.id
+        XCTAssertEqual(hit(fatigue, landed: true), 0)
         XCTAssertTrue(tracker.tagChanged(.damage, entity: hero, value: 0, previous: 5, block: friendlySpell, context: context).isEmpty)
         XCTAssertTrue(tracker.tagChanged(.armor, entity: hero, value: 0, previous: 10, block: friendlySpell, context: context).isEmpty)
+    }
+
+    func testConfirmedHeroDamageIsBoundedAndCannotLeakAcrossBlocksOrInitialization() {
+        let tracker = AccountQuestLogTracker()
+        let hero = Entity(id: 20); hero[.cardtype] = CardType.hero.rawValue; hero[.controller] = 2
+        let spell = Entity(id: 10); spell[.controller] = 1
+        let entities = [10: spell, 20: hero]
+        let context = AccountQuestLogTracker.Context(playerID: 1, opponentID: 2, mulliganDone: true,
+            battlegrounds: false, combat: false, turn: 3, defenderID: 0, entity: { entities[$0] })
+        let block = Block(parent: nil, id: 1, type: "POWER", cardId: nil, target: nil, trigger: nil)
+        block.sourceEntityId = 10
+        func loss(_ tag: GameTag, _ value: Int, _ previous: Int, creation: Bool = false) -> Int {
+            tracker.tagChanged(tag, entity: hero, value: value, previous: previous,
+                block: block, context: context, isCreationTag: creation).reduce(0) { total, sample in
+                if case .action(.add(.enemyHeroDamage, let value), _) = sample { return total + value }
+                return total
+            }
+        }
+        tracker.damageStarted(hero, amount: 6, block: block, context: context)
+        XCTAssertEqual(loss(.damage, 4, 0, creation: true), 0)
+        XCTAssertEqual(loss(.armor, 0, 2), 2)
+        XCTAssertEqual(loss(.damage, 4, 0), 4)
+        XCTAssertEqual(loss(.damage, 4, 0), 0) // Replayed delivery cannot consume the hit twice.
+        XCTAssertEqual(loss(.armor, 0, 10), 0) // Later armor removal is not damage.
+        tracker.damageStarted(hero, amount: 5, block: block, context: context)
+        tracker.blockEnded(block)
+        XCTAssertEqual(loss(.damage, 9, 4), 0)
+        tracker.damageStarted(hero, amount: 5, block: block, context: context)
+        tracker.reset()
+        XCTAssertEqual(loss(.damage, 9, 4), 0)
     }
 
     func testDrawTagsResetByTurnAndModesRejectPractice() {
@@ -221,6 +395,7 @@ final class AccountProgressLifecycleTests: XCTestCase {
         database.loadDatabase(splashscreen: nil, withLanguages: [.enUS])
         XCTAssertTrue(try XCTUnwrap(Cards.any(byId: "JAIL_321")).accountQuestKeywords.contains("PREPARE"))
         XCTAssertTrue(try XCTUnwrap(Cards.any(byId: "CATA_134")).accountQuestKeywords.contains("SHATTER"))
+        XCTAssertTrue(try XCTUnwrap(Cards.any(byId: "EX1_029")).accountQuestKeywords.contains("DEATHRATTLE"))
         // Brann's text references Battlecry; Brann himself has no Battlecry.
         XCTAssertFalse(try XCTUnwrap(Cards.any(byId: "LOE_077")).accountQuestKeywords.contains("BATTLECRY"))
         let game = Game(hearthstoneRunState: HearthstoneRunState(isRunning: false, isActive: false))

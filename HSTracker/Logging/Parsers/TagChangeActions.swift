@@ -18,14 +18,15 @@ struct TagChangeActions {
         self.powerGameStateParser = parser
     }
     
-    func findAction(eventHandler: PowerEventHandler, tag: GameTag, id: Int, value: Int, prevValue: Int) -> (() -> Void)? {
+    func findAction(eventHandler: PowerEventHandler, tag: GameTag, id: Int, value: Int, prevValue: Int,
+                    isCreationTag: Bool = false) -> (() -> Void)? {
         if tag == .bacon_card_dbid_reward {
             logger.debug("Tag change of reward: \(id): \(prevValue) -> \(value)")
         }
         return {
             if let game = eventHandler as? Game {
                 game.updateAccountQuestEstimate(tag: tag, entityID: id, value: value,
-                                               previous: prevValue, block: self.powerGameStateParser?.currentBlock)
+                        previous: prevValue, block: self.powerGameStateParser?.currentBlock, isCreationTag: isCreationTag)
             }
             switch tag {
             case .zone: 

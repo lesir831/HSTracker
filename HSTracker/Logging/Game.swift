@@ -2462,8 +2462,9 @@ class Game: NSObject, PowerEventHandler {
 		logger.verbose("currentGameStats: \(currentGameStats), "
 			+ "handledGameEnd: \(self.handledGameEnd)")
 		
+        completeAccountQuestMatch()
         self.handledGameEnd = true
-        DispatchQueue.main.async { AccountProgressModel.shared.endMatch() }
+        DispatchQueue.main.async { AccountProgressModel.shared.endMatch(preservingCompletedEvent: true) }
 
                 
         // clear any left over hover
@@ -4718,6 +4719,7 @@ class Game: NSObject, PowerEventHandler {
     }
     
     func handlePlayerEntitiesChosen(choice: IHsCompletedChoice) {
+        updateAccountQuestChoice(choice)
         let chosen = choice.chosenEntityIds?.compactMap { id in entities[id] } ?? [Entity]()
         let source = entities[choice.sourceEntityId]
         switch choice.choiceType {

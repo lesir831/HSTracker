@@ -13,7 +13,8 @@ class Database {
     private static let accountQuestKeywords = [218: "BATTLECRY", 462: "QUEST", 1725: "QUESTLINE",
                                                4028: "KINDRED", 3934: "REWIND", 4309: "HERALD",
                                                4239: "SHATTER", 4240: "SHATTERED", 4354: "PREPARE",
-                                               GameTag.colossal.rawValue: "COLOSSAL"]
+                                               GameTag.colossal.rawValue: "COLOSSAL",
+                                               GameTag.deathrattle.rawValue: "DEATHRATTLE"]
     static let mechanics: [Int: String] = [
         GameTag.windfury.rawValue: "WINDFURY",
         GameTag.taunt.rawValue: "TAUNT",

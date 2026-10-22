@@ -114,10 +114,9 @@ struct AccountQuestOverlayPanel: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                Text(text(!inMatch ? "AccountProgress_MenuSnapshotNote"
-                    : (status == "AccountProgress_JoinedMidMatch" ? status
-                       : (rows.contains { $0.estimatedDelta != nil }
-                          ? "AccountProgress_OverlayEstimateNote" : "AccountProgress_ConfirmedRefreshNote"))))
+                Text(text(rows.contains { $0.estimatedDelta != nil } ? "AccountProgress_OverlayEstimateNote"
+                    : (!inMatch ? "AccountProgress_MenuSnapshotNote"
+                       : (status == "AccountProgress_JoinedMidMatch" ? status : "AccountProgress_ConfirmedRefreshNote"))))
                     .font(.system(size: 11)).foregroundColor(Color(hex: "#493824"))
                     .lineLimit(1).padding(.bottom, 12).frame(height: 28)
             }
@@ -200,9 +199,9 @@ struct AccountQuestOverlayRowView: View {
 
     private var statusText: String {
         if row.isConfirmedComplete { return text("AccountProgress_QuestComplete") }
-        if !inMatch && row.quota > 0 { return text("AccountProgress_Confirmed") }
         if row.isEstimatedComplete { return text("AccountProgress_EstimatedComplete") }
         if let delta = row.estimatedDelta { return text("AccountProgress_Estimate") + " +\(delta)" }
+        if !inMatch && row.quota > 0 { return text("AccountProgress_Confirmed") }
         return text(row.quota > 0 ? "AccountProgress_AfterMatch" : "AccountProgress_QuestDetailsPending")
     }
 }

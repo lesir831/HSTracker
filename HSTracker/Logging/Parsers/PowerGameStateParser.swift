@@ -46,6 +46,7 @@ class PowerGameStateParser: LogEventParser {
     // the burned card goes to the void rather than being destroyed, and the
     // Overdrawn lens lists what is in there.
     var gameStateIsInsideMetaDataBurnedCard = false
+    private var accountQuestDamageMetadata = AccountQuestDamageMetadata()
 
 	private let eventHandler: PowerEventHandler
 
@@ -74,6 +75,8 @@ class PowerGameStateParser: LogEventParser {
     }
 
     func blockEnd() {
+        if eventHandler.determinedPlayers() { tagChangeHandler.invokeQueuedActions(eventHandler: eventHandler) }
+        if let block = currentBlock { (eventHandler as? Game)?.endAccountQuestBlock(block) }
         currentBlock = currentBlock?.parent
         if let entity = eventHandler.entities[currentEntityId] {
             entity.info.hasOutstandingTagChanges = false
@@ -90,6 +93,10 @@ class PowerGameStateParser: LogEventParser {
     // MARK: - line handling
 
     func handle(logLine: LogLine) {
+        if let damage = accountQuestDamageMetadata.read(logLine.line) {
+            (eventHandler as? Game)?.updateAccountQuestDamage(entityID: damage.entityID,
+                amount: damage.amount, block: currentBlock)
+        }
         var creationTag = false
         var isInsideMetaDataHistoryTarget = false
         var isInsideMetaDataBurnedCard = false
@@ -673,6 +680,7 @@ class PowerGameStateParser: LogEventParser {
                 let match = MetaInfoRegex.matches(logLine.line)
                 if let entityId = Int(match.count > 1 ? match[1].value : match[0].value),
                    let entity = eventHandler.entities[entityId] {
+                    (eventHandler as? Game)?.updateAccountQuestBurn(entity, block: currentBlock)
                     let isControlledByPlayer = entity.isControlled(by: eventHandler.player.id)
                     // Only a Godfrey burn goes to the void; an ordinary overdraw
                     // destroys the card and has nothing to list.

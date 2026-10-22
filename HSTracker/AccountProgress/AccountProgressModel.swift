@@ -145,14 +145,14 @@ final class AccountProgressModel: ObservableObject {
         refresh(full: true)
     }
 
-    func endMatch() {
+    func endMatch(preservingCompletedEvent: Bool = false) {
         revision += 1
         currentMatch = nil
         overlayMatchActive = false
         estimatesEligible = false
         baselinePending = false
         session.endMatch()
-        questEstimate.endMatch()
+        questEstimate.endMatch(preservingCompletedEvent: preservingCompletedEvent)
         guard enabled else { return }
         logger.debug("Quest tracking ended by game lifecycle")
         // The log result can precede the server's account-state update.
@@ -265,16 +265,18 @@ final class AccountProgressModel: ObservableObject {
         UserDefaults.standard.set(pinned.sorted(), forKey: "account_progress_pins." + scope)
     }
 
-    func observeQuest(_ metric: AccountQuestEstimate.Metric, total: Int, matchID: String, isLocalPlayer: Bool) {
+    func observeQuest(_ metric: AccountQuestEstimate.Metric, total: Int, matchID: String, isLocalPlayer: Bool,
+                      context: AccountQuestEstimate.Context = .init()) {
         guard enabled else { return }
-        if questEstimate.observe(metric, total: total, matchID: matchID, isLocalPlayer: isLocalPlayer) {
+        if questEstimate.observe(metric, total: total, matchID: matchID, isLocalPlayer: isLocalPlayer, context: context) {
             logger.debug("Quest estimate sample: \(metric.rawValue)=\(total)")
         }
     }
 
-    func observeQuest(_ event: AccountQuestEstimate.Event, eventID: String, matchID: String) {
+    func observeQuest(_ event: AccountQuestEstimate.Event, eventID: String, matchID: String,
+                      context: AccountQuestEstimate.Context = .init()) {
         guard enabled else { return }
-        questEstimate.observe(event, eventID: eventID, matchID: matchID, isLocalPlayer: true)
+        questEstimate.observe(event, eventID: eventID, matchID: matchID, isLocalPlayer: true, context: context)
     }
 
     private struct Cache: Codable {

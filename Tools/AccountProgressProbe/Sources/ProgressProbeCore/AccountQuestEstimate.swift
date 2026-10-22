@@ -1,6 +1,6 @@
 import Foundation
 
-/// Per-match estimates only. Server snapshots remain the persisted source of truth.
+/// Non-persisted log estimates. Server snapshots remain the persisted source of truth.
 public struct AccountQuestEstimate {
     public enum Metric: String {
         case heroPowerUses, manaSpent, enemyHeroDamage, cardsDrawn, turnsTaken
@@ -43,6 +43,120 @@ public struct AccountQuestEstimate {
         case add(Metric, Int)
         case played(CardFacts)
         case summoned(CardFacts)
+        case destroyed(CardFacts)
+        case deathrattleTriggered(CardFacts)
+        /// Base draw/mana credit comes from the cumulative tags; these carry
+        /// only the per-card expansion bonus, so the base is never counted twice.
+        case drawn(CardFacts)
+        case manaSpentOn(CardFacts, Int)
+        case statsIncreased
+        case handFilled
+        case damageTaken(Int, ownTurn: Bool)
+        case attacked(CardFacts, Int)
+        case discovered(CardFacts)
+        case matchCompleted(won: Bool)
+    }
+
+    /// Match facts captured on the log queue, not inferred from quest text or
+    /// the class of a generated/stolen card. Class bonuses use the player's hero.
+    public struct Context {
+        public let ranked: Bool
+        public let playerClass: String
+        public let tavernBrawl: Bool
+
+        public init(ranked: Bool = false, playerClass: String = "", tavernBrawl: Bool = false) {
+            self.ranked = ranked
+            self.playerClass = playerClass
+            self.tavernBrawl = tavernBrawl
+        }
+    }
+
+    public struct EventRule {
+        public let id: Int
+        public let quota: Int
+        let credit: (Event, Context) -> Int
+    }
+
+    /// Current event definitions checked against the client and public catalog
+    /// on 2026-10-07. These are explicit rules, never parsed localized prose.
+    /// Event bonuses are additive; ordinary quests' double-credit rules differ.
+    public static let eventRules: [EventRule] = [
+        EventRule(id: 1956, quota: 350) { event, context in
+            guard case .played(let card) = event, card.type == 5 else { return 0 }
+            return 1 + (context.ranked ? 1 : 0) + (card.school == 6 ? 1 : 0)
+                + (context.playerClass == "warlock" ? 1 : 0)
+        },
+        EventRule(id: 1957, quota: 60) { event, context in
+            guard case .matchCompleted(let won) = event else { return 0 }
+            return 1 + (context.tavernBrawl ? 3 : 0) + (won ? 1 : 0)
+        },
+        EventRule(id: 1986, quota: 50) { event, context in
+            guard case .summoned(let card) = event, card.type == 4 else { return 0 }
+            return 1 + (context.ranked ? 1 : 0) + (card.keywords.contains("DEATHRATTLE") ? 1 : 0)
+        },
+        EventRule(id: 1987, quota: 50) { event, context in
+            switch event {
+            case .add(.cardsDrawn, let count): return multiply(max(0, count), by: context.ranked ? 2 : 1)
+            case .drawn(let card): return card.set == "escapefrom_violet_hold" ? 1 : 0
+            default: return 0
+            }
+        },
+        EventRule(id: 1988, quota: 30) { event, context in
+            guard case .statsIncreased = event else { return 0 }
+            return context.ranked ? 2 : 1
+        },
+        EventRule(id: 1989, quota: 15) { event, context in
+            guard case .played(let card) = event, card.type == 39 else { return 0 }
+            return 1 + (context.ranked ? 1 : 0) + (card.set == "escapefrom_violet_hold" ? 1 : 0)
+        },
+        EventRule(id: 1990, quota: 100) { event, context in
+            switch event {
+            case .add(.manaSpent, let count): return multiply(max(0, count), by: context.ranked ? 2 : 1)
+            case .manaSpentOn(let card, let count): return card.set == "escapefrom_violet_hold" ? max(0, count) : 0
+            default: return 0
+            }
+        },
+        EventRule(id: 1991, quota: 1) { event, _ in
+            guard case .played(let card) = event else { return 0 }
+            return card.cost == 10 ? 1 : 0
+        },
+        EventRule(id: 1992, quota: 1) { event, _ in
+            if case .handFilled = event { return 1 }
+            return 0
+        },
+        EventRule(id: 1993, quota: 50) { event, context in
+            guard case .add(.turnsTaken, let count) = event else { return 0 }
+            return multiply(max(0, count), by: context.ranked ? 2 : 1)
+        },
+        EventRule(id: 1994, quota: 15) { event, context in
+            guard case .add(.heroPowerUses, let count) = event else { return 0 }
+            return multiply(max(0, count), by: context.ranked ? 2 : 1)
+        },
+        EventRule(id: 1995, quota: 75) { event, context in
+            guard case .damageTaken(let count, let ownTurn) = event else { return 0 }
+            return multiply(max(0, count), by: 1 + (context.ranked ? 1 : 0) + (ownTurn ? 1 : 0))
+        },
+        EventRule(id: 1996, quota: 75) { event, context in
+            guard case .destroyed(let card) = event, card.type == 4 else { return 0 }
+            return 1 + (context.ranked ? 1 : 0) + (card.set == "escapefrom_violet_hold" ? 1 : 0)
+        },
+        EventRule(id: 1997, quota: 75) { event, context in
+            guard case .attacked(let card, let count) = event else { return 0 }
+            return multiply(max(0, count), by: 1 + (context.ranked ? 1 : 0)
+                + (context.playerClass == "rogue" ? 1 : 0) + (card.set == "escapefrom_violet_hold" ? 1 : 0))
+        },
+        EventRule(id: 1998, quota: 25) { event, context in
+            guard case .deathrattleTriggered(let card) = event else { return 0 }
+            return 1 + (context.ranked ? 1 : 0) + (card.set == "escapefrom_violet_hold" ? 1 : 0)
+        },
+        EventRule(id: 1999, quota: 20) { event, context in
+            guard case .discovered(let card) = event else { return 0 }
+            return 1 + (context.ranked ? 1 : 0) + (card.set == "escapefrom_violet_hold" ? 1 : 0)
+        }
+    ]
+
+    private static func multiply(_ value: Int, by multiplier: Int) -> Int {
+        value > Int.max / multiplier ? Int.max : value * multiplier
     }
 
     public struct Rule {
@@ -132,8 +246,10 @@ public struct AccountQuestEstimate {
     private var baseline: [Int: Int] = [:]
     private var totals: [Metric: Int] = [:]
     private var cardTotals: [Int: Int] = [:]
+    private var eventTotals: [Int: Int] = [:]
     private var eventIDs: Set<String> = []
     private var rewardTrack = 1
+    private var awaitingCompletedEventSettlement = false
 
     public init() {}
 
@@ -144,6 +260,12 @@ public struct AccountQuestEstimate {
     }
 
     public mutating func bind(_ snapshot: AccountProgressSnapshot, scope: String) {
+        if awaitingCompletedEventSettlement {
+            // The first post-game authoritative read may also correct an
+            // ineligible concession. Never persist or carry this into a new match.
+            self = AccountQuestEstimate()
+            return
+        }
         guard matchID != nil else { return }
         if let previous = self.scope {
             if previous != scope { self = AccountQuestEstimate() }
@@ -165,7 +287,8 @@ public struct AccountQuestEstimate {
     /// Additive actions use a parser-owned identity (block/entity/transition),
     /// separate from cumulative player tags. Replayed notifications cannot add twice.
     @discardableResult
-    public mutating func observe(_ event: Event, eventID: String, matchID: String, isLocalPlayer: Bool) -> Bool {
+    public mutating func observe(_ event: Event, eventID: String, matchID: String, isLocalPlayer: Bool,
+                                 context: Context = Context()) -> Bool {
         guard self.matchID == matchID, isLocalPlayer, !eventID.isEmpty,
               eventIDs.insert(eventID).inserted else { return false }
         switch event {
@@ -179,27 +302,62 @@ public struct AccountQuestEstimate {
                 let amount = rule.cardCredit?(card, summoned) ?? 0
                 if amount > 0 { cardTotals[rule.id] = Self.add(cardTotals[rule.id] ?? 0, amount) }
             }
+        case .destroyed, .deathrattleTriggered, .drawn, .manaSpentOn, .statsIncreased,
+             .handFilled, .damageTaken, .attacked, .discovered, .matchCompleted: break
         }
+        observeEvent(event, context: context)
         return true
+    }
+
+    private mutating func observeEvent(_ event: Event, context: Context) {
+        // A reward-track-7 task does not make Battlegrounds actions eligible
+        // for a Traditional Modes objective.
+        guard rewardTrack == 1 else { return }
+        for rule in Self.eventRules {
+            let amount = rule.credit(event, context)
+            if amount > 0 { eventTotals[rule.id] = Self.add(eventTotals[rule.id] ?? 0, amount) }
+        }
     }
 
     private static func add(_ a: Int, _ b: Int) -> Int { a > Int.max - b ? Int.max : a + b }
 
     @discardableResult
-    public mutating func observe(_ metric: Metric, total: Int, matchID: String, isLocalPlayer: Bool) -> Bool {
+    public mutating func observe(_ metric: Metric, total: Int, matchID: String, isLocalPlayer: Bool,
+                                 context: Context = Context()) -> Bool {
         guard self.matchID == matchID, isLocalPlayer, total > (totals[metric] ?? 0) else { return false }
+        observeEvent(.add(metric, total - (totals[metric] ?? 0)), context: context)
         // These game tags are cumulative; duplicate/reordered log lines are not additions.
         totals[metric] = max(totals[metric] ?? 0, total)
         return true
     }
 
-    public func progress(for quest: AccountProgressRecord, quota: Int, rewardTrack: Int? = nil) -> (total: Int, delta: Int)? {
+    public func progress(for quest: AccountProgressRecord, quota: Int, rewardTrack: Int? = nil,
+                         isEvent: Bool = false) -> (total: Int, delta: Int)? {
+        guard matchID != nil || awaitingCompletedEventSettlement,
+              let base = baseline[quest.id], !(3...9).contains(quest.status) else { return nil }
+        if isEvent || rewardTrack == 7 {
+            guard self.rewardTrack == 1, rewardTrack == 7,
+                  Self.eventRules.contains(where: { $0.id == quest.id && $0.quota == quota }) else { return nil }
+            let delta = eventTotals[quest.id] ?? 0
+            return (min(quota, max(quest.progress, Self.add(base, delta))), delta)
+        }
         guard rewardTrack == nil || rewardTrack == self.rewardTrack else { return nil }
-        guard let rule = Self.rules.first(where: { $0.id == quest.id && $0.quota == quota && $0.rewardTrack == self.rewardTrack }),
-              matchID != nil, let base = baseline[quest.id], !(3...9).contains(quest.status) else { return nil }
+        guard let rule = Self.rules.first(where: { $0.id == quest.id && $0.quota == quota && $0.rewardTrack == self.rewardTrack }) else { return nil }
         let delta = rule.metric.map { totals[$0] ?? 0 } ?? cardTotals[quest.id] ?? 0
         return (min(quota, max(quest.progress, Self.add(base, delta))), delta)
     }
 
-    public mutating func endMatch() { self = AccountQuestEstimate() }
+    public mutating func endMatch(preservingCompletedEvent: Bool = false) {
+        guard preservingCompletedEvent, baseline[1957] != nil, (eventTotals[1957] ?? 0) > 0 else {
+            self = AccountQuestEstimate()
+            return
+        }
+        matchID = nil
+        awaitingCompletedEventSettlement = true
+        baseline = baseline.filter { $0.key == 1957 }
+        eventTotals = eventTotals.filter { $0.key == 1957 }
+        totals.removeAll()
+        cardTotals.removeAll()
+        eventIDs.removeAll()
+    }
 }
